@@ -107,24 +107,25 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
           </button>
        </div>
 
-       {/* Grid */}
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+       {/* List View (Single Column) */}
+       <div className="space-y-3">
           {GOVERNORATES.map((gov) => (
              <motion.div 
                 key={gov}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-3 group hover:border-emerald-200 transition-colors"
+                className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 group hover:border-emerald-200 transition-colors"
              >
-                <div className="flex items-center gap-3 min-w-0">
-                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-50 flex items-center justify-center text-slate-400 font-bold group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
+                {/* City Info - Added flex-1 to prevent collapse */}
+                <div className="flex items-center gap-3 flex-1">
+                   <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-slate-400 font-bold group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
                       {gov[0]}
                    </div>
-                   <span className="font-bold text-slate-700 text-sm sm:text-lg truncate">{gov}</span>
+                   <span className="font-bold text-slate-700 text-base">{gov}</span>
                 </div>
                 
-                {/* Compact Input Container for Mobile */}
-                <div className="relative w-24 sm:w-auto sm:min-w-[160px] shrink-0">
+                {/* Input Container */}
+                <div className="relative w-32 sm:w-auto sm:min-w-[160px] shrink-0">
                    <input 
                       type="text"
                       inputMode="numeric"
@@ -132,9 +133,9 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
                       value={rates[gov] === 0 ? '' : rates[gov].toLocaleString()}
                       placeholder="0"
                       onChange={(e) => handleRateChange(gov, e.target.value)}
-                      className="w-full pl-8 pr-2 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-bold text-slate-800 text-sm sm:text-lg text-left dir-ltr transition-all shadow-sm"
+                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-bold text-slate-800 text-lg text-left dir-ltr transition-all shadow-sm"
                    />
-                   <span className="absolute left-2.5 top-2.5 sm:top-3.5 text-[10px] sm:text-xs text-slate-400 font-bold pointer-events-none">IQD</span>
+                   <span className="absolute left-3 top-3.5 text-xs text-slate-400 font-bold pointer-events-none">IQD</span>
                 </div>
              </motion.div>
           ))}

@@ -328,11 +328,11 @@ export default function App() {
         {activeTab === 'settings' && (
             <div className="space-y-6">
                 {/* Settings Tab Switcher - Responsive & Scrollable */}
-                <div className="bg-white p-1.5 rounded-2xl flex md:inline-flex shadow-sm border border-gray-100 overflow-x-auto w-full md:w-auto">
+                <div className="bg-white p-1.5 rounded-2xl flex md:inline-flex shadow-sm border border-gray-100 overflow-x-auto w-full md:w-auto flex-nowrap scrollbar-hide">
                     <button 
                         onClick={() => setSettingsTab('delivery')}
                         className={clsx(
-                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0",
                             settingsTab === 'delivery' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
                         )}
                     >
@@ -342,7 +342,7 @@ export default function App() {
                     <button 
                          onClick={() => setSettingsTab('campaigns')}
                          className={clsx(
-                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0",
                             settingsTab === 'campaigns' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
                         )}
                     >
@@ -352,7 +352,7 @@ export default function App() {
                     <button 
                          onClick={() => setSettingsTab('blacklist')}
                          className={clsx(
-                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0",
                             settingsTab === 'blacklist' ? "bg-red-500 text-white shadow-md shadow-red-500/20" : "text-slate-500 hover:text-red-500"
                         )}
                     >

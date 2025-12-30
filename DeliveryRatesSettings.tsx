@@ -124,8 +124,8 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
                    <span className="font-bold text-slate-700 text-base">{gov}</span>
                 </div>
                 
-                {/* Input Container */}
-                <div className="relative w-32 sm:w-auto sm:min-w-[160px] shrink-0">
+                {/* Input Container - Added ml-3 for mobile spacing */}
+                <div className="relative w-32 sm:w-auto sm:min-w-[160px] shrink-0 ml-3">
                    <input 
                       type="text"
                       inputMode="numeric"

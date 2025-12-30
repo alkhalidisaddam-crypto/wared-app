@@ -150,36 +150,36 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
       </main>
 
 
-      {/* --- Mobile Bottom Glass Navigation --- */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] flex justify-between items-center px-6 py-3 z-50">
+      {/* --- Mobile Bottom Navigation --- */}
+      <nav className="md:hidden fixed bottom-5 left-4 right-4 h-16 bg-white rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.1)] border border-gray-100 flex justify-between items-center px-6 z-50 mx-auto max-w-sm">
             {navItems.filter(i => !i.hidden).map((item) => {
                 const isActive = activeTab === item.id;
                 return (
                     <button
                         key={item.id}
                         onClick={() => setActiveTab(item.id)}
-                        className="relative flex flex-col items-center gap-1 min-w-[3.5rem]"
+                        className="relative flex flex-col items-center justify-center gap-1 flex-1 min-w-0"
                     >
                          {isActive && (
                             <motion.div 
                                 layoutId="mobileActiveBlob"
-                                className="absolute -top-10 w-12 h-12 bg-emerald-500/20 rounded-full blur-xl"
+                                className="absolute -top-6 w-8 h-8 bg-emerald-500/10 rounded-full blur-xl"
                             />
                         )}
                         <motion.div
                             animate={{ 
-                                y: isActive ? -4 : 0,
+                                y: isActive ? -2 : 0,
                                 color: isActive ? '#10b981' : '#94a3b8'
                             }}
-                            className={cn("p-2 rounded-xl transition-colors", isActive ? "bg-emerald-50" : "")}
+                            className={cn("p-1.5 rounded-xl transition-colors", isActive ? "bg-emerald-50" : "")}
                         >
-                            {item.icon && <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />}
+                            {item.icon && <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />}
                         </motion.div>
                         {isActive && (
                             <motion.span 
                                 initial={{ opacity: 0, scale: 0.5 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="text-[10px] font-bold text-emerald-600 absolute -bottom-1.5"
+                                className="text-[9px] font-bold text-emerald-600 absolute -bottom-1.5 whitespace-nowrap"
                             >
                                 {item.label}
                             </motion.span>

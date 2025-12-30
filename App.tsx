@@ -327,36 +327,36 @@ export default function App() {
 
         {activeTab === 'settings' && (
             <div className="space-y-6">
-                {/* Settings Tab Switcher */}
-                <div className="bg-white p-1.5 rounded-2xl inline-flex shadow-sm border border-gray-100 overflow-x-auto max-w-full">
+                {/* Settings Tab Switcher - Responsive & Scrollable */}
+                <div className="bg-white p-1.5 rounded-2xl flex md:inline-flex shadow-sm border border-gray-100 overflow-x-auto w-full md:w-auto">
                     <button 
                         onClick={() => setSettingsTab('delivery')}
                         className={clsx(
-                            "px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
                             settingsTab === 'delivery' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
                         )}
                     >
-                        <MapPin size={16} />
+                        <MapPin size={16} className="shrink-0" />
                         أسعار التوصيل
                     </button>
                     <button 
                          onClick={() => setSettingsTab('campaigns')}
                          className={clsx(
-                            "px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
                             settingsTab === 'campaigns' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
                         )}
                     >
-                        <Megaphone size={16} />
+                        <Megaphone size={16} className="shrink-0" />
                         إدارة الحملات
                     </button>
                     <button 
                          onClick={() => setSettingsTab('blacklist')}
                          className={clsx(
-                            "px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap",
+                            "flex-1 md:flex-none px-3 md:px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap",
                             settingsTab === 'blacklist' ? "bg-red-500 text-white shadow-md shadow-red-500/20" : "text-slate-500 hover:text-red-500"
                         )}
                     >
-                        <ShieldBan size={16} />
+                        <ShieldBan size={16} className="shrink-0" />
                         القائمة السوداء
                     </button>
                 </div>

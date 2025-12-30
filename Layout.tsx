@@ -151,8 +151,7 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
 
 
       {/* --- Mobile Bottom Glass Navigation --- */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 pointer-events-none">
-        <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] px-6 py-3 flex justify-between items-center pointer-events-auto max-w-sm mx-auto">
+      <nav className="md:hidden fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2rem] flex justify-between items-center px-6 py-3 z-50">
             {navItems.filter(i => !i.hidden).map((item) => {
                 const isActive = activeTab === item.id;
                 return (
@@ -188,7 +187,6 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
                     </button>
                 )
             })}
-        </div>
       </nav>
     </div>
   );

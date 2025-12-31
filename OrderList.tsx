@@ -355,69 +355,73 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                 <span className="font-mono text-xs font-bold text-slate-400">#{String(order.id).slice(0, 6)}</span>
                             </div>
                             
-                            <div className="relative">
+                            <div className="flex items-center gap-2 relative">
+                                {/* NEW VISIBLE SHARE BUTTON */}
                                 <button 
-                                    onClick={(e) => toggleAction(order.id, e)}
-                                    className="p-1.5 -mr-2 text-slate-400 hover:bg-gray-50 rounded-full"
+                                    onClick={(e) => handleShareInvoice(order, e)}
+                                    className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full transition-colors active:scale-95"
+                                    title="مشاركة الوصل"
                                 >
-                                    <MoreHorizontal size={18} />
+                                    <Share2 size={18} />
                                 </button>
-                                
-                                <AnimatePresence>
-                                    {activeActionId === order.id && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            className="absolute left-0 top-8 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 p-1"
-                                        >
-                                            <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-50">تغيير الحالة</div>
-                                            {ORDER_STATUSES.map(s => (
+
+                                <div className="relative">
+                                    <button 
+                                        onClick={(e) => toggleAction(order.id, e)}
+                                        className="p-1.5 -mr-2 text-slate-400 hover:bg-gray-50 rounded-full"
+                                    >
+                                        <MoreHorizontal size={18} />
+                                    </button>
+                                    
+                                    <AnimatePresence>
+                                        {activeActionId === order.id && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                className="absolute left-0 top-8 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 p-1"
+                                            >
+                                                <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-50">تغيير الحالة</div>
+                                                {ORDER_STATUSES.map(s => (
+                                                    <button 
+                                                        key={s}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onStatusChange(order.id, s);
+                                                            setActiveActionId(null);
+                                                        }}
+                                                        className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg flex items-center gap-2"
+                                                    >
+                                                        <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig[s].color.split(' ')[1].replace('text-', 'bg-'))}></div>
+                                                        {statusConfig[s].label}
+                                                    </button>
+                                                ))}
+                                                <div className="h-px bg-gray-50 my-1"></div>
                                                 <button 
-                                                    key={s}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onStatusChange(order.id, s);
+                                                        handleBlockCustomer(order);
                                                         setActiveActionId(null);
                                                     }}
-                                                    className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg flex items-center gap-2"
+                                                    className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg flex items-center gap-2"
                                                 >
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig[s].color.split(' ')[1].replace('text-', 'bg-'))}></div>
-                                                    {statusConfig[s].label}
+                                                    <ShieldBan size={14} />
+                                                    حظر الزبون
                                                 </button>
-                                            ))}
-                                            <div className="h-px bg-gray-50 my-1"></div>
-                                            <button 
-                                                onClick={(e) => handleShareInvoice(order, e)}
-                                                className="w-full text-right px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
-                                            >
-                                                <Share2 size={14} />
-                                                مشاركة الوصل
-                                            </button>
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleBlockCustomer(order);
-                                                    setActiveActionId(null);
-                                                }}
-                                                className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg flex items-center gap-2"
-                                            >
-                                                <ShieldBan size={14} />
-                                                حظر الزبون
-                                            </button>
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if(window.confirm('حذف الطلب؟')) onDelete(order.id);
-                                                }}
-                                                className="w-full text-right px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-2"
-                                            >
-                                                <Trash2 size={14} />
-                                                حذف الطلب
-                                            </button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if(window.confirm('حذف الطلب؟')) onDelete(order.id);
+                                                    }}
+                                                    className="w-full text-right px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-2"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    حذف الطلب
+                                                </button>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
                             </div>
                         </div>
 

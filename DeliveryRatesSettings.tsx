@@ -112,8 +112,8 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
             </button>
        </div>
 
-       {/* Vertical List Layout - Merged Style */}
-       <div className="flex flex-col gap-3">
+       {/* Vertical List Layout - Compact Content */}
+       <div className="flex flex-col gap-3 items-start">
           {filteredGovernorates.map((gov) => (
              <motion.div 
                 layout
@@ -122,27 +122,27 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
                 key={gov}
                 className="relative group"
              >
-                <div className="flex items-center bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm transition-all focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 hover:border-emerald-300">
+                <div className="flex items-center bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm transition-all focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 hover:border-emerald-300 w-auto">
                     
                     {/* City Name Section (Inside, Right) */}
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shrink-0 min-w-[110px] justify-center group-hover:bg-emerald-50 group-hover:border-emerald-100 group-hover:text-emerald-700 transition-colors">
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shrink-0 min-w-[100px] justify-center group-hover:bg-emerald-50 group-hover:border-emerald-100 group-hover:text-emerald-700 transition-colors">
                         <span className="font-bold text-slate-700 text-sm group-hover:text-emerald-700 transition-colors">{gov}</span>
                     </div>
 
-                    {/* Input Section */}
-                    <div className="flex-1 relative">
+                    {/* Input Section (Fixed width to bring IQD closer) */}
+                    <div className="relative w-32">
                         <input 
                             type="text"
                             inputMode="numeric"
                             value={rates[gov] === 0 ? '' : rates[gov]?.toLocaleString()}
                             placeholder="0"
                             onChange={(e) => handleRateChange(gov, e.target.value)}
-                            className="w-full h-full bg-transparent border-none outline-none px-4 font-bold text-slate-800 dir-ltr text-right text-lg placeholder:text-slate-300"
+                            className="w-full h-full bg-transparent border-none outline-none px-2 font-bold text-slate-800 dir-ltr text-center text-lg placeholder:text-slate-300"
                         />
                     </div>
                     
                     {/* Suffix */}
-                    <div className="px-4 text-xs font-bold text-slate-400 shrink-0">
+                    <div className="px-3 text-xs font-bold text-slate-400 shrink-0">
                         IQD
                     </div>
                 </div>

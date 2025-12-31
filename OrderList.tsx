@@ -14,12 +14,16 @@ import {
   Filter,
   Trash2,
   ChevronDown,
-  ShieldBan
+  ShieldBan,
+  Share2,
+  Download,
+  LayoutDashboard
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Order, OrderStatus } from './types';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import html2canvas from 'html2canvas';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -46,12 +50,16 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
+  
+  // State for Invoice Generation
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Filter Logic
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone.includes(searchTerm) ||
+      String(order.phone).includes(searchTerm) ||
       String(order.id).toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
@@ -86,8 +94,81 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
       }
   };
 
+  // --- Invoice Sharing Logic ---
+  const handleShareInvoice = async (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveActionId(null);
+    setIsGenerating(true);
+    setInvoiceOrder(order);
+
+    // Give React a moment to render the hidden invoice div with the new order data
+    setTimeout(async () => {
+        try {
+            const element = document.getElementById('invoice-hidden-template');
+            if (!element) return;
+
+            // Generate Image
+            const canvas = await html2canvas(element, {
+                scale: 2, // High resolution
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false
+            });
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    setIsGenerating(false);
+                    return;
+                }
+
+                let copiedToClipboard = false;
+
+                // Try Clipboard API
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    copiedToClipboard = true;
+                    alert('تم نسخ صورة الوصل! \n\n1. سيفتح واتساب الآن.\n2. اضغط (لصق) داخل المحادثة.');
+                } catch (err) {
+                    console.warn("Clipboard write failed, falling back to download", err);
+                }
+
+                // If Clipboard failed (e.g., non-HTTPS or Firefox/Safari restrictions), download it
+                if (!copiedToClipboard) {
+                    const link = document.createElement('a');
+                    // SAFELY HANDLE ID SLICING HERE
+                    const safeId = String(order.id); 
+                    link.download = `invoice_${order.customer_name}_${safeId.slice(0,4)}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    alert('تم تحميل صورة الوصل! \n\nسيفتح واتساب الآن، قم بإرفاق الصورة من الاستوديو.');
+                }
+
+                // Open WhatsApp
+                let phone = String(order.phone).replace(/[^0-9]/g, '');
+                // Basic Iraqi phone formatting fix
+                if (phone.startsWith('07')) phone = '964' + phone.substring(1);
+                if (phone.startsWith('7')) phone = '964' + phone;
+
+                window.open(`https://wa.me/${phone}`, '_blank');
+                
+            }, 'image/png');
+
+        } catch (error) {
+            console.error("Invoice generation failed", error);
+            alert('حدث خطأ أثناء إنشاء الوصل.');
+        } finally {
+            setIsGenerating(false);
+            // Don't clear invoiceOrder immediately so we don't get a flash of empty content if re-rendering, 
+            // but for this flow it's fine.
+        }
+    }, 100);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      
       {/* --- Controls Header --- */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100">
           
@@ -223,6 +304,13 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                         <td className="py-4 px-6">
                              <div className="flex items-center gap-1">
                                 <button 
+                                    onClick={(e) => handleShareInvoice(order, e)}
+                                    className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
+                                    title="مشاركة الوصل (واتساب)"
+                                >
+                                    <Share2 size={16} />
+                                </button>
+                                <button 
                                     onClick={() => handleBlockCustomer(order)}
                                     className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                     title="حظر الزبون (القائمة السوداء)"
@@ -300,6 +388,13 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                             ))}
                                             <div className="h-px bg-gray-50 my-1"></div>
                                             <button 
+                                                onClick={(e) => handleShareInvoice(order, e)}
+                                                className="w-full text-right px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
+                                            >
+                                                <Share2 size={14} />
+                                                مشاركة الوصل
+                                            </button>
+                                            <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleBlockCustomer(order);
@@ -363,6 +458,92 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
             </div>
         </>
       )}
+
+      {/* --- HIDDEN INVOICE TEMPLATE (OFF-SCREEN) --- */}
+      {invoiceOrder && (
+          <div 
+            id="invoice-hidden-template" 
+            className="fixed -left-[9999px] top-0 w-[500px] bg-white text-slate-800 p-8 z-[100]"
+          >
+             {/* Header */}
+             <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
+                <div>
+                   <div className="flex items-center gap-2 mb-2 text-emerald-600">
+                        <LayoutDashboard size={24} />
+                        <h1 className="text-3xl font-black">وارد</h1>
+                   </div>
+                   <p className="text-sm font-bold text-slate-500">نظام إدارة الطلبات</p>
+                </div>
+                <div className="text-left">
+                    <h2 className="text-2xl font-black text-slate-800">فاتورة طلب</h2>
+                    {/* SAFELY HANDLE ID SLICING HERE */}
+                    <p className="text-sm font-medium text-slate-500 mt-1 dir-ltr">#{String(invoiceOrder.id).slice(0,8)}</p>
+                    <p className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString('ar-IQ')}</p>
+                </div>
+             </div>
+
+             {/* Customer Details */}
+             <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                 <h3 className="text-sm font-black text-slate-400 uppercase mb-3">تفاصيل الزبون</h3>
+                 <div className="grid grid-cols-2 gap-4">
+                     <div>
+                         <p className="text-xs text-slate-400 mb-1">الاسم</p>
+                         <p className="font-bold text-lg">{invoiceOrder.customer_name}</p>
+                     </div>
+                     <div>
+                         <p className="text-xs text-slate-400 mb-1">رقم الهاتف</p>
+                         <p className="font-bold text-lg dir-ltr text-right">{invoiceOrder.phone}</p>
+                     </div>
+                     <div className="col-span-2">
+                         <p className="text-xs text-slate-400 mb-1">العنوان</p>
+                         <p className="font-bold text-lg">{invoiceOrder.governorate} {invoiceOrder.address ? ` - ${invoiceOrder.address}` : ''}</p>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Items Table */}
+             <div className="mb-8">
+                <table className="w-full">
+                    <thead>
+                        <tr className="bg-slate-800 text-white text-sm">
+                            <th className="py-3 px-4 text-right rounded-r-lg">المنتج</th>
+                            <th className="py-3 px-4 text-left rounded-l-lg">المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        <tr>
+                            <td className="py-4 px-4 font-bold">{invoiceOrder.product}</td>
+                            <td className="py-4 px-4 font-bold text-left dir-ltr">{invoiceOrder.price.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td className="py-4 px-4 font-bold text-slate-500">كلفة التوصيل</td>
+                            <td className="py-4 px-4 font-bold text-left dir-ltr text-slate-500">{invoiceOrder.delivery_cost.toLocaleString()}</td>
+                        </tr>
+                         {invoiceOrder.discount > 0 && (
+                            <tr>
+                                <td className="py-4 px-4 font-bold text-red-500">خصم</td>
+                                <td className="py-4 px-4 font-bold text-left dir-ltr text-red-500">-{invoiceOrder.discount.toLocaleString()}</td>
+                            </tr>
+                         )}
+                    </tbody>
+                </table>
+             </div>
+
+             {/* Total */}
+             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-6 flex justify-between items-center mb-8">
+                 <span className="text-xl font-black text-emerald-800">المجموع الكلي</span>
+                 <span className="text-3xl font-black text-emerald-600 dir-ltr">
+                    {(invoiceOrder.price + invoiceOrder.delivery_cost - (invoiceOrder.discount || 0)).toLocaleString()} IQD
+                 </span>
+             </div>
+
+             {/* Footer */}
+             <div className="text-center text-slate-400 text-sm font-bold">
+                 شكراً لثقتكم بنا ❤️
+             </div>
+          </div>
+      )}
+
     </div>
   );
 };

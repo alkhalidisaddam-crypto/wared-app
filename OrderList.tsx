@@ -94,8 +94,8 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
       }
   };
 
-  // --- Invoice Sharing Logic ---
-  const handleShareInvoice = async (order: Order, e: React.MouseEvent) => {
+  // --- Invoice Download Logic ---
+  const handleDownloadInvoice = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     setActiveActionId(null);
     setIsGenerating(true);
@@ -115,53 +115,24 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                 logging: false
             });
 
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    setIsGenerating(false);
-                    return;
-                }
-
-                let copiedToClipboard = false;
-
-                // Try Clipboard API
-                try {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]);
-                    copiedToClipboard = true;
-                    alert('تم نسخ صورة الوصل! \n\n1. سيفتح واتساب الآن.\n2. اضغط (لصق) داخل المحادثة.');
-                } catch (err) {
-                    console.warn("Clipboard write failed, falling back to download", err);
-                }
-
-                // If Clipboard failed (e.g., non-HTTPS or Firefox/Safari restrictions), download it
-                if (!copiedToClipboard) {
-                    const link = document.createElement('a');
-                    // SAFELY HANDLE ID SLICING HERE
-                    const safeId = String(order.id); 
-                    link.download = `invoice_${order.customer_name}_${safeId.slice(0,4)}.png`;
-                    link.href = canvas.toDataURL();
-                    link.click();
-                    alert('تم تحميل صورة الوصل! \n\nسيفتح واتساب الآن، قم بإرفاق الصورة من الاستوديو.');
-                }
-
-                // Open WhatsApp
-                let phone = String(order.phone).replace(/[^0-9]/g, '');
-                // Basic Iraqi phone formatting fix
-                if (phone.startsWith('07')) phone = '964' + phone.substring(1);
-                if (phone.startsWith('7')) phone = '964' + phone;
-
-                window.open(`https://wa.me/${phone}`, '_blank');
-                
-            }, 'image/png');
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            // Trigger Download
+            const link = document.createElement('a');
+            const safeId = String(order.id); 
+            // Sanitize filename
+            const safeName = order.customer_name.replace(/[^a-z0-9\u0600-\u06FF]/gi, '_');
+            link.download = `invoice_${safeName}_${safeId.slice(0,8)}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
         } catch (error) {
             console.error("Invoice generation failed", error);
             alert('حدث خطأ أثناء إنشاء الوصل.');
         } finally {
             setIsGenerating(false);
-            // Don't clear invoiceOrder immediately so we don't get a flash of empty content if re-rendering, 
-            // but for this flow it's fine.
         }
     }, 100);
   };
@@ -304,11 +275,11 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                         <td className="py-4 px-6">
                              <div className="flex items-center gap-1">
                                 <button 
-                                    onClick={(e) => handleShareInvoice(order, e)}
+                                    onClick={(e) => handleDownloadInvoice(order, e)}
                                     className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
-                                    title="مشاركة الوصل (واتساب)"
+                                    title="تنزيل صورة الوصل"
                                 >
-                                    <Share2 size={16} />
+                                    <Download size={16} />
                                 </button>
                                 <button 
                                     onClick={() => handleBlockCustomer(order)}
@@ -356,13 +327,13 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                             </div>
                             
                             <div className="flex items-center gap-2 relative">
-                                {/* NEW VISIBLE SHARE BUTTON */}
+                                {/* VISIBLE DOWNLOAD BUTTON */}
                                 <button 
-                                    onClick={(e) => handleShareInvoice(order, e)}
+                                    onClick={(e) => handleDownloadInvoice(order, e)}
                                     className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full transition-colors active:scale-95"
-                                    title="مشاركة الوصل"
+                                    title="تنزيل صورة الوصل"
                                 >
-                                    <Share2 size={18} />
+                                    <Download size={18} />
                                 </button>
 
                                 <div className="relative">
@@ -397,6 +368,13 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                                     </button>
                                                 ))}
                                                 <div className="h-px bg-gray-50 my-1"></div>
+                                                <button 
+                                                    onClick={(e) => handleDownloadInvoice(order, e)}
+                                                    className="w-full text-right px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
+                                                >
+                                                    <Download size={14} />
+                                                    تنزيل صورة الوصل
+                                                </button>
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();

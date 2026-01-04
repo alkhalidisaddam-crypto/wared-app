@@ -17,13 +17,15 @@ import {
   ShieldBan,
   Share2,
   Download,
-  LayoutDashboard
+  LayoutDashboard,
+  FileSpreadsheet
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Order, OrderStatus } from './types';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -94,6 +96,58 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
       }
   };
 
+  // --- Export to Excel Logic ---
+  const handleExportExcel = () => {
+    try {
+      // Map data to Arabic headers and friendly formats
+      const dataToExport = filteredOrders.map(order => ({
+        'رقم الوصل': String(order.id).slice(0, 8),
+        'تاريخ الطلب': new Date(order.created_at).toLocaleDateString('ar-IQ'),
+        'اسم الزبون': order.customer_name,
+        'رقم الهاتف': order.phone,
+        'المحافظة': order.governorate,
+        'العنوان': order.address || '-',
+        'المنتج': order.product,
+        'السعر (IQD)': order.price,
+        'سعر التوصيل (IQD)': order.delivery_cost,
+        'الخصم (IQD)': order.discount || 0,
+        'المجموع الكلي (IQD)': (order.price + order.delivery_cost - (order.discount || 0)),
+        'الحالة': statusConfig[order.status]?.label || order.status,
+      }));
+
+      // Create Worksheet
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      
+      // Auto-width for columns (approximate)
+      const wscols = [
+        { wch: 10 }, // ID
+        { wch: 12 }, // Date
+        { wch: 20 }, // Name
+        { wch: 15 }, // Phone
+        { wch: 10 }, // Gov
+        { wch: 25 }, // Address
+        { wch: 20 }, // Product
+        { wch: 12 }, // Price
+        { wch: 12 }, // Delivery
+        { wch: 10 }, // Discount
+        { wch: 15 }, // Total
+        { wch: 15 }, // Status
+      ];
+      ws['!cols'] = wscols;
+
+      // Create Workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "الطلبات");
+
+      // Generate File Name with Date
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Wared_Orders_${dateStr}.xlsx`);
+    } catch (error) {
+      console.error("Export failed", error);
+      alert('حدث خطأ أثناء تصدير الملف');
+    }
+  };
+
   // --- Invoice Download Logic ---
   const handleDownloadInvoice = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -155,37 +209,51 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
             />
           </div>
 
-          {/* Filter Tabs (Desktop) */}
-          <div className="hidden md:flex items-center gap-1 bg-gray-50 p-1.5 rounded-2xl overflow-x-auto max-w-full">
-            <button 
-                onClick={() => setFilterStatus('all')}
-                className={cn("px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap", filterStatus === 'all' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+            
+            {/* Export Excel Button (Added) */}
+            <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl font-bold hover:bg-emerald-100 transition-colors flex-shrink-0"
+                title="تصدير إلى Excel"
             >
-                الكل
+                <FileSpreadsheet size={20} />
+                <span className="hidden md:inline">تصدير Excel</span>
             </button>
-            {ORDER_STATUSES.map(status => (
-                <button 
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
-                    className={cn("px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap", filterStatus === status ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
-                >
-                    {statusConfig[status].label}
-                </button>
-            ))}
-          </div>
 
-           {/* Filter Dropdown (Mobile) */}
-           <div className="md:hidden w-full relative">
-              <select 
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as OrderStatus | 'all')}
-                className="w-full appearance-none bg-gray-50 border border-gray-100 text-slate-700 py-3 px-4 pr-10 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">كل الطلبات</option>
-                {ORDER_STATUSES.map(s => <option key={s} value={s}>{statusConfig[s].label}</option>)}
-              </select>
-              <Filter className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" size={18} />
-           </div>
+            {/* Filter Tabs (Desktop) */}
+            <div className="hidden md:flex items-center gap-1 bg-gray-50 p-1.5 rounded-2xl">
+                <button 
+                    onClick={() => setFilterStatus('all')}
+                    className={cn("px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap", filterStatus === 'all' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                >
+                    الكل
+                </button>
+                {ORDER_STATUSES.map(status => (
+                    <button 
+                        key={status}
+                        onClick={() => setFilterStatus(status)}
+                        className={cn("px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap", filterStatus === status ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                    >
+                        {statusConfig[status].label}
+                    </button>
+                ))}
+            </div>
+            
+             {/* Filter Dropdown (Mobile) */}
+            <div className="md:hidden flex-1 relative min-w-[140px]">
+                <select 
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as OrderStatus | 'all')}
+                    className="w-full appearance-none bg-gray-50 border border-gray-100 text-slate-700 py-3 px-4 pr-10 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                    <option value="all">كل الطلبات</option>
+                    {ORDER_STATUSES.map(s => <option key={s} value={s}>{statusConfig[s].label}</option>)}
+                </select>
+                <Filter className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" size={18} />
+            </div>
+
+          </div>
       </div>
 
       <div className="px-2 flex justify-between items-center">

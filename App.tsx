@@ -14,7 +14,7 @@ import { CampaignStats } from './CampaignStats';
 import { ProfitCalculator } from './ProfitCalculator';
 import { SuppliersManager } from './SuppliersManager';
 import { ProductAnalytics } from './ProductAnalytics';
-import { Loader2, Plus, Wallet, TrendingDown, ArrowUpRight, DollarSign, MapPin, Megaphone, ShieldBan } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // --- Simplified Setup Screen ---
@@ -39,6 +39,7 @@ export default function App() {
   
   // UI State
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null); // State for editing
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   
   // Auth State
@@ -120,6 +121,26 @@ export default function App() {
     }
   };
 
+  const handleToggleCollected = async (id: string, currentStatus: boolean) => {
+    try {
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, is_collected: !currentStatus } : o));
+        
+        const { error } = await client.from('orders').update({ is_collected: !currentStatus }).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error("Error updating collection status", err);
+        fetchData(); // Revert
+    }
+  };
+
+  // --- EDIT FUNCTION ---
+  const handleEditOrder = (order: Order) => {
+      setOrderToEdit(order);
+      setIsOrderModalOpen(true);
+  };
+
+  // --- DELETE FUNCTION ---
   const handleDeleteOrder = async (id: string) => {
       try {
           // Optimistic update
@@ -129,25 +150,43 @@ export default function App() {
           if (error) throw error;
       } catch (err) {
           console.error("Error deleting order", err);
-          fetchData();
+          alert("فشل حذف الطلب، يرجى المحاولة مرة أخرى");
+          fetchData(); // Restore data
       }
   };
 
   // Stats Calculation
   const stats = useMemo(() => {
       const delivered = orders.filter(o => o.status === 'delivered');
-      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price + o.delivery_cost - (o.discount||0)), 0);
+      
+      // 1. Cash in Hand (Received from Courier): 
+      // This is the net amount the store owner gets. 
+      // Formula: (Price + Delivery - Discount) - Delivery Cost = Price - Discount
+      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+      
+      // 2. Pending (With Driver): 
+      // This is the total cash the driver is holding from the customer.
+      // Formula: Price + Delivery - Discount
       const pending = delivered.filter(o => !o.is_collected).reduce((sum, o) => sum + (o.price + o.delivery_cost - (o.discount||0)), 0);
-      const revenue = delivered.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+      
+      // 3. Total Expenses (Global)
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-      const costs = delivered.reduce((sum, o) => sum + (o.cost_price||0) + o.delivery_cost, 0) + totalExpenses;
+
+      // 4. Net Profit Logic
+      // Revenue (from collected orders only) = Price - Discount
+      const collectedOrders = delivered.filter(o => o.is_collected);
+      const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+      const costOfGoodsSold = collectedOrders.reduce((sum, o) => sum + (o.cost_price || 0), 0);
+      
+      // Net = (Revenue - COGS) - Global Expenses
+      const net = revenueFromCollected - costOfGoodsSold - totalExpenses;
       
       // Calculate Total Supplier Debt
       const totalSupplierDebt = ledger.reduce((acc, curr) => {
          return curr.transaction_type === 'PURCHASE' ? acc + curr.amount : acc - curr.amount;
       }, 0);
       
-      return { cash, pending, net: revenue - costs, totalExpenses, totalDebt: totalSupplierDebt };
+      return { cash, pending, net, totalExpenses, totalDebt: totalSupplierDebt };
   }, [orders, expenses, ledger]);
 
 
@@ -208,15 +247,15 @@ export default function App() {
         {activeTab === 'home' && (
             <div className="space-y-8 pb-24">
                 <DashboardStats stats={stats} orders={orders} />
-                
                 <ProductAnalytics orders={orders} />
-                
-                {/* Campaign Analytics Section */}
                 <CampaignStats orders={orders} campaigns={campaigns} />
 
                 <div className="md:hidden fixed bottom-24 left-6 z-40">
                     <button 
-                        onClick={() => setIsOrderModalOpen(true)}
+                        onClick={() => {
+                            setOrderToEdit(null);
+                            setIsOrderModalOpen(true);
+                        }}
                         className="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-emerald-500/40 border border-white/20 active:scale-95 transition-all"
                     >
                         <Plus size={28} strokeWidth={2.5} />
@@ -231,11 +270,16 @@ export default function App() {
                 orders={orders} 
                 onStatusChange={handleUpdateStatus} 
                 onDelete={handleDeleteOrder} 
+                onToggleCollected={handleToggleCollected}
+                onEdit={handleEditOrder}
                 userId={session.user.id}
              />
              <div className="md:hidden fixed bottom-24 left-6 z-40">
                     <button 
-                        onClick={() => setIsOrderModalOpen(true)}
+                        onClick={() => {
+                            setOrderToEdit(null);
+                            setIsOrderModalOpen(true);
+                        }}
                         className="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-emerald-500/40 border border-white/20 active:scale-95 transition-all"
                     >
                         <Plus size={28} strokeWidth={2.5} />
@@ -309,7 +353,6 @@ export default function App() {
                     )}
                 </div>
                 
-                {/* Mobile FAB for Expense */}
                 <div className="md:hidden fixed bottom-24 left-6 z-40">
                     <button 
                         onClick={() => setIsExpenseModalOpen(true)}
@@ -327,7 +370,6 @@ export default function App() {
 
         {activeTab === 'settings' && (
             <div className="space-y-6 max-w-2xl mx-auto">
-                {/* Settings Tab Switcher - Vertical Stack */}
                 <div className="flex flex-col gap-3">
                     <button 
                         onClick={() => setSettingsTab('delivery')}
@@ -395,10 +437,12 @@ export default function App() {
             </div>
         )}
 
-        {/* Global Floating Action Buttons for Desktop */}
         <div className="hidden md:flex fixed bottom-8 left-8 z-50 items-center gap-4">
              <button 
-                onClick={() => setIsOrderModalOpen(true)}
+                onClick={() => {
+                    setOrderToEdit(null);
+                    setIsOrderModalOpen(true);
+                }}
                 className="group flex items-center gap-2 px-6 py-4 bg-slate-900 text-white rounded-2xl shadow-2xl hover:bg-slate-800 transition-all active:scale-95"
             >
                 <Plus size={20} className="text-emerald-400 group-hover:rotate-90 transition-transform duration-300" />
@@ -410,6 +454,7 @@ export default function App() {
             isOpen={isOrderModalOpen} 
             onClose={() => {
                 setIsOrderModalOpen(false);
+                setOrderToEdit(null);
             }} 
             onSuccess={fetchData}
             onOpenSettings={() => {
@@ -418,6 +463,7 @@ export default function App() {
             }}
             userId={session.user.id}
             orders={orders}
+            orderToEdit={orderToEdit}
         />
         
         <ExpenseModal

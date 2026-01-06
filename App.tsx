@@ -14,7 +14,7 @@ import { CampaignStats } from './CampaignStats';
 import { ProfitCalculator } from './ProfitCalculator';
 import { SuppliersManager } from './SuppliersManager';
 import { ProductAnalytics } from './ProductAnalytics';
-import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan, PenLine, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // --- Simplified Setup Screen ---
@@ -39,8 +39,10 @@ export default function App() {
   
   // UI State
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null); // State for editing
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null); // State for editing orders
+  
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null); // State for editing expenses
   
   // Auth State
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
@@ -134,13 +136,13 @@ export default function App() {
     }
   };
 
-  // --- EDIT FUNCTION ---
+  // --- EDIT ORDER FUNCTION ---
   const handleEditOrder = (order: Order) => {
       setOrderToEdit(order);
       setIsOrderModalOpen(true);
   };
 
-  // --- DELETE FUNCTION ---
+  // --- DELETE ORDER FUNCTION ---
   const handleDeleteOrder = async (id: string) => {
       try {
           // Optimistic update
@@ -153,6 +155,24 @@ export default function App() {
           alert("فشل حذف الطلب، يرجى المحاولة مرة أخرى");
           fetchData(); // Restore data
       }
+  };
+
+  // --- EXPENSE FUNCTIONS ---
+  const handleEditExpense = (expense: Expense) => {
+      setExpenseToEdit(expense);
+      setIsExpenseModalOpen(true);
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if(!window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+    try {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+        const { error } = await client.from('expenses').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error("Error deleting expense", err);
+        fetchData();
+    }
   };
 
   // Stats Calculation
@@ -249,6 +269,56 @@ export default function App() {
                 <DashboardStats stats={stats} orders={orders} />
                 <ProductAnalytics orders={orders} />
                 <CampaignStats orders={orders} campaigns={campaigns} />
+                
+                {/* --- Recent Expenses on Home Tab --- */}
+                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-6 border-b border-gray-50 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                                <TrendingDown size={20} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-slate-800 text-lg">آخر المصروفات</h4>
+                                <p className="text-xs text-slate-400">أحدث عمليات الصرف التي تم تسجيلها</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                setExpenseToEdit(null);
+                                setIsExpenseModalOpen(true);
+                            }}
+                            className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                            إضافة مصروف
+                        </button>
+                    </div>
+
+                    <div className="space-y-3">
+                        {expenses.length === 0 ? (
+                            <div className="text-center py-8 text-slate-400 text-sm">لا توجد مصروفات مسجلة مؤخراً</div>
+                        ) : (
+                            expenses.slice(0, 5).map(expense => (
+                                <div key={expense.id} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-red-500 font-bold text-xs shadow-sm">
+                                            {expense.category[0]}
+                                        </div>
+                                        <div>
+                                            <h5 className="font-bold text-slate-700 text-sm">{expense.title}</h5>
+                                            <p className="text-[10px] text-slate-400">{new Date(expense.created_at).toLocaleDateString('ar-IQ')}</p>
+                                        </div>
+                                    </div>
+                                    <span className="font-bold text-slate-800 dir-ltr text-sm">-{expense.amount.toLocaleString()}</span>
+                                </div>
+                            ))
+                        )}
+                        {expenses.length > 5 && (
+                             <button onClick={() => setActiveTab('wallet')} className="w-full py-2 text-center text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                                 عرض كل المصروفات
+                             </button>
+                        )}
+                    </div>
+                </div>
 
                 <div className="md:hidden fixed bottom-24 left-6 z-40">
                     <button 
@@ -302,7 +372,10 @@ export default function App() {
                 <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-black text-slate-800">المحفظة والمصاريف</h2>
                     <button 
-                        onClick={() => setIsExpenseModalOpen(true)}
+                        onClick={() => {
+                            setExpenseToEdit(null);
+                            setIsExpenseModalOpen(true);
+                        }}
                         className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-bold border border-red-100 flex items-center gap-2 hover:bg-red-100 transition-colors"
                     >
                         <Plus size={16} />
@@ -336,7 +409,7 @@ export default function App() {
                     ) : (
                         <div className="space-y-4">
                             {expenses.map(expense => (
-                                <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold">
                                             {expense.category[0]}
@@ -346,7 +419,25 @@ export default function App() {
                                             <p className="text-xs text-slate-500">{new Date(expense.created_at).toLocaleDateString('ar-IQ')} • {expense.category}</p>
                                         </div>
                                     </div>
-                                    <p className="font-bold text-slate-800 dir-ltr">-{expense.amount.toLocaleString()}</p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="font-bold text-slate-800 dir-ltr">-{expense.amount.toLocaleString()}</p>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => handleEditExpense(expense)}
+                                                className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="تعديل"
+                                            >
+                                                <PenLine size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteExpense(expense.id)}
+                                                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="حذف"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -355,7 +446,10 @@ export default function App() {
                 
                 <div className="md:hidden fixed bottom-24 left-6 z-40">
                     <button 
-                        onClick={() => setIsExpenseModalOpen(true)}
+                        onClick={() => {
+                            setExpenseToEdit(null);
+                            setIsExpenseModalOpen(true);
+                        }}
                         className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-red-500/40 border border-white/20 active:scale-95 transition-all"
                     >
                         <Plus size={28} strokeWidth={2.5} />
@@ -468,9 +562,13 @@ export default function App() {
         
         <ExpenseModal
             isOpen={isExpenseModalOpen}
-            onClose={() => setIsExpenseModalOpen(false)}
+            onClose={() => {
+                setIsExpenseModalOpen(false);
+                setExpenseToEdit(null);
+            }}
             onSuccess={fetchData}
             userId={session.user.id}
+            expenseToEdit={expenseToEdit}
         />
     </Layout>
   );

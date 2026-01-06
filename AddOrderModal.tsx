@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Save, MapPin, User, Phone, Package, DollarSign, Settings, Truck, Megaphone, Search, ShieldBan, AlertTriangle } from 'lucide-react';
+import { X, Loader2, Save, MapPin, User, Phone, Package, DollarSign, Settings, Truck, Megaphone, Search, ShieldBan, AlertTriangle, Sparkles, PenLine } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Order, Campaign } from './types';
 import { clsx } from 'clsx';
@@ -16,7 +16,8 @@ interface AddOrderModalProps {
   onSuccess: () => void;
   onOpenSettings?: () => void;
   userId?: string;
-  orders?: Order[]; // Added to provide source for autocomplete
+  orders?: Order[];
+  orderToEdit?: Order | null;
 }
 
 const GOVERNORATES = [
@@ -25,7 +26,7 @@ const GOVERNORATES = [
   "واسط", "ميسان", "المثنى", "الديوانية", "ذي قار", "كركوك"
 ];
 
-export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, userId, orders = [] }: AddOrderModalProps) => {
+export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, userId, orders = [], orderToEdit }: AddOrderModalProps) => {
   const [loading, setLoading] = useState(false);
   const [deliveryRates, setDeliveryRates] = useState<Record<string, number>>({});
   const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
@@ -39,6 +40,9 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
   const [riskStatus, setRiskStatus] = useState<'safe' | 'warning' | 'blocked'>('safe');
   const [riskMessage, setRiskMessage] = useState<string | null>(null);
   const [isCheckingRisk, setIsCheckingRisk] = useState(false);
+
+  // Toast / Notification State
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -63,25 +67,57 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
             ]);
             
             // Handle Rates
+            let ratesMap: Record<string, number> = {};
             if (ratesRes.data) {
-                const ratesMap: Record<string, number> = {};
                 ratesRes.data.forEach((r: any) => ratesMap[r.governorate] = r.price);
                 setDeliveryRates(ratesMap);
-                
-                // Set initial delivery cost if 'بغداد' has a rate
-                if (formData.governorate === 'بغداد' && ratesMap['بغداد']) {
-                   setFormData(prev => ({ ...prev, delivery_cost: ratesMap['بغداد'].toString() }));
-                }
             }
 
             // Handle Campaigns
             if (campaignsRes.data) {
                 setActiveCampaigns(campaignsRes.data);
             }
+
+            // If NOT editing, set default delivery cost
+            if (!orderToEdit && formData.governorate === 'بغداد' && ratesMap['بغداد'] && !formData.delivery_cost) {
+               setFormData(prev => ({ ...prev, delivery_cost: ratesMap['بغداد'].toString() }));
+            }
         };
         fetchInitialData();
     }
   }, [userId, isOpen]);
+
+  // Handle Edit Mode Population
+  useEffect(() => {
+    if (orderToEdit && isOpen) {
+        setFormData({
+            customer_name: orderToEdit.customer_name,
+            phone: orderToEdit.phone,
+            governorate: orderToEdit.governorate,
+            address: orderToEdit.address || '',
+            product: orderToEdit.product,
+            price: orderToEdit.price.toString(),
+            delivery_cost: orderToEdit.delivery_cost.toString(),
+            notes: '',
+            campaign_id: orderToEdit.campaign_id || ''
+        });
+    } else if (!isOpen) {
+        // Reset when closed
+        setFormData({
+            customer_name: '',
+            phone: '',
+            governorate: 'بغداد',
+            address: '',
+            product: '',
+            price: '',
+            delivery_cost: '',
+            notes: '',
+            campaign_id: ''
+        });
+        setRiskStatus('safe');
+        setRiskMessage(null);
+    }
+  }, [orderToEdit, isOpen]);
 
   // Click outside to close suggestions
   useEffect(() => {
@@ -94,12 +130,25 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Show toast for 3 seconds
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
   // Risk Detection Logic
   const checkCustomerRisk = useCallback(async (phone: string) => {
       if (!phone || phone.length < 10 || !userId) {
           setRiskStatus('safe');
           setRiskMessage(null);
           return;
+      }
+
+      // If we are editing and the phone number hasn't changed, don't check risk (it's the same customer)
+      if (orderToEdit && orderToEdit.phone === phone) {
+           return;
       }
 
       setIsCheckingRisk(true);
@@ -148,7 +197,7 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
       } finally {
           setIsCheckingRisk(false);
       }
-  }, [userId]);
+  }, [userId, orderToEdit]);
 
   // Debounce risk check
   useEffect(() => {
@@ -204,7 +253,7 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
       
       if (isNaN(priceNum)) throw new Error("سعر المنتج غير صحيح");
 
-      const newOrder = {
+      const orderPayload = {
         user_id: userId,
         customer_name: formData.customer_name,
         phone: formData.phone,
@@ -213,34 +262,30 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
         product: formData.product,
         price: priceNum,
         delivery_cost: deliveryNum, 
-        status: 'new',
-        discount: 0,
         campaign_id: formData.campaign_id || null
       };
 
-      const { error } = await supabase!.from('orders').insert([newOrder]);
-      if (error) throw error;
+      if (orderToEdit) {
+         // Update existing
+         const { error } = await supabase!
+            .from('orders')
+            .update(orderPayload)
+            .eq('id', orderToEdit.id);
+         if (error) throw error;
+      } else {
+         // Insert new
+         const { error } = await supabase!
+            .from('orders')
+            .insert([{ ...orderPayload, status: 'new', discount: 0 }]);
+         if (error) throw error;
+      }
 
       onSuccess();
       onClose();
-      // Reset form
-      setFormData({
-        customer_name: '',
-        phone: '',
-        governorate: 'بغداد',
-        address: '',
-        product: '',
-        price: '',
-        delivery_cost: '',
-        notes: '',
-        campaign_id: ''
-      });
-      setRiskStatus('safe');
-      setRiskMessage(null);
       
     } catch (error) {
-      console.error('Error adding order:', error);
-      alert('حدث خطأ أثناء إضافة الطلب. يرجى المحاولة مرة أخرى.');
+      console.error('Error saving order:', error);
+      alert('حدث خطأ أثناء حفظ الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -269,10 +314,14 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
             className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
         >
             {/* Header */}
-            <div className="flex-none px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                <div>
-                    <h3 className="text-xl font-black text-slate-800">إضافة طلب جديد</h3>
-                    <p className="text-xs text-slate-400 font-bold mt-1">أدخل تفاصيل الزبون والطلب بدقة</p>
+            <div className="flex-none px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-black text-slate-800">
+                        {orderToEdit ? 'تعديل الطلب' : 'إضافة طلب جديد'}
+                    </h3>
+                    <p className="text-xs text-slate-400 font-bold">
+                        {orderToEdit ? 'تحديث بيانات الطلب الحالي' : 'أدخل تفاصيل الطلب يدوياً'}
+                    </p>
                 </div>
                 <button 
                     onClick={onClose}
@@ -281,6 +330,21 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
                     <X size={20} />
                 </button>
             </div>
+
+            {/* Toast Message */}
+            <AnimatePresence>
+                {toastMessage && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-20 left-4 right-4 z-20 bg-emerald-600 text-white p-3 rounded-xl text-sm font-bold shadow-xl flex items-center justify-center gap-2"
+                    >
+                        <Sparkles size={16} />
+                        {toastMessage}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Scrollable Form */}
             <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-white scrollbar-hide">
@@ -532,7 +596,7 @@ export const AddOrderModal = ({ isOpen, onClose, onSuccess, onOpenSettings, user
                     ) : (
                         <>
                             <Save size={24} />
-                            حفظ الطلب
+                            {orderToEdit ? 'تحديث الطلب' : 'حفظ الطلب'}
                         </>
                     )}
                 </button>

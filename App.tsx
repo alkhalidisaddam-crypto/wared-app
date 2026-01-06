@@ -180,25 +180,29 @@ export default function App() {
       const delivered = orders.filter(o => o.status === 'delivered');
       
       // 1. Cash in Hand (Received from Courier): 
-      // User Request: Deduct delivery_cost from the received amount.
-      // Formula: (Price - Discount) - Delivery Cost
-      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - o.delivery_cost - (o.discount||0)), 0);
+      // Corrected Logic: Price is the Item Price (Net). 
+      // The driver keeps delivery_cost. The merchant receives Price - Discount.
+      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
       
-      // 2. Pending (With Driver): 
-      // This is the total cash the driver is holding from the customer.
-      // Formula: Price + Delivery - Discount
-      const pending = delivered.filter(o => !o.is_collected).reduce((sum, o) => sum + (o.price + o.delivery_cost - (o.discount||0)), 0);
+      // 2. Pending (With Driver - Total Cash): 
+      // The driver collects (Price + Delivery - Discount) from customer.
+      const pendingOrders = delivered.filter(o => !o.is_collected);
+      const pending = pendingOrders.reduce((sum, o) => sum + (o.price + o.delivery_cost - (o.discount||0)), 0);
       
+      // 2.1 Pending Net (What Merchant Expects):
+      // Merchant expects: Price - Discount (Driver keeps delivery).
+      const pendingNet = pendingOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+
       // 3. Total Expenses (Global)
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
       // 4. Net Profit Logic
-      // Revenue (from collected orders only) = Price - Delivery - Discount
+      // Revenue is just the Price (because Delivery is pass-through to driver).
       const collectedOrders = delivered.filter(o => o.is_collected);
-      const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - o.delivery_cost - (o.discount||0)), 0);
+      const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
       const costOfGoodsSold = collectedOrders.reduce((sum, o) => sum + (o.cost_price || 0), 0);
       
-      // Net = (Revenue - COGS) - Global Expenses
+      // Net = Revenue - COGS - Expenses
       const net = revenueFromCollected - costOfGoodsSold - totalExpenses;
       
       // Calculate Total Supplier Debt
@@ -206,7 +210,7 @@ export default function App() {
          return curr.transaction_type === 'PURCHASE' ? acc + curr.amount : acc - curr.amount;
       }, 0);
       
-      return { cash, pending, net, totalExpenses, totalDebt: totalSupplierDebt };
+      return { cash, pending, pendingNet, net, totalExpenses, totalDebt: totalSupplierDebt };
   }, [orders, expenses, ledger]);
 
 

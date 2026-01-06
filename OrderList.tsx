@@ -9,16 +9,15 @@ import {
   XCircle, 
   Truck, 
   MoreHorizontal,
-  Calendar,
   Search,
   Filter,
   Trash2,
-  ChevronDown,
   ShieldBan,
-  Share2,
   Download,
   LayoutDashboard,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Banknote,
+  PenLine
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Order, OrderStatus } from './types';
@@ -35,6 +34,8 @@ interface OrderListProps {
   orders: Order[];
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
   onDelete: (id: string) => void;
+  onToggleCollected?: (id: string, currentStatus: boolean) => void;
+  onEdit?: (order: Order) => void;
   userId?: string;
 }
 
@@ -85,7 +86,7 @@ const StatusSelector = ({ currentStatus, onSelect, className }: { currentStatus:
     );
 };
 
-export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderListProps) => {
+export const OrderList = ({ orders, onStatusChange, onDelete, onToggleCollected, onEdit, userId }: OrderListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all');
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
@@ -136,7 +137,6 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
   // --- Export to Excel Logic ---
   const handleExportExcel = () => {
     try {
-      // Map data to Arabic headers and friendly formats
       const dataToExport = filteredOrders.map(order => ({
         'رقم الوصل': String(order.id).slice(0, 8),
         'تاريخ الطلب': new Date(order.created_at).toLocaleDateString('ar-IQ'),
@@ -150,33 +150,19 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
         'الخصم (IQD)': order.discount || 0,
         'المجموع الكلي (IQD)': (order.price + order.delivery_cost - (order.discount || 0)),
         'الحالة': statusConfig[order.status]?.label || order.status,
+        'المبلغ المستلم': order.is_collected ? 'تم الاستلام' : 'معلق'
       }));
 
-      // Create Worksheet
       const ws = XLSX.utils.json_to_sheet(dataToExport);
-      
-      // Auto-width for columns (approximate)
       const wscols = [
-        { wch: 10 }, // ID
-        { wch: 12 }, // Date
-        { wch: 20 }, // Name
-        { wch: 15 }, // Phone
-        { wch: 10 }, // Gov
-        { wch: 25 }, // Address
-        { wch: 20 }, // Product
-        { wch: 12 }, // Price
-        { wch: 12 }, // Delivery
-        { wch: 10 }, // Discount
-        { wch: 15 }, // Total
-        { wch: 15 }, // Status
+        { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, 
+        { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, 
+        { wch: 15 }, { wch: 15 }, { wch: 12 }
       ];
       ws['!cols'] = wscols;
 
-      // Create Workbook
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "الطلبات");
-
-      // Generate File Name with Date
       const dateStr = new Date().toISOString().split('T')[0];
       XLSX.writeFile(wb, `Wared_Orders_${dateStr}.xlsx`);
     } catch (error) {
@@ -192,33 +178,25 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
     setIsGenerating(true);
     setInvoiceOrder(order);
 
-    // Give React a moment to render the hidden invoice div with the new order data
     setTimeout(async () => {
         try {
             const element = document.getElementById('invoice-hidden-template');
             if (!element) return;
-
-            // Generate Image
             const canvas = await html2canvas(element, {
-                scale: 2, // High resolution
+                scale: 2,
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 logging: false
             });
-
             const dataUrl = canvas.toDataURL('image/png');
-            
-            // Trigger Download
             const link = document.createElement('a');
             const safeId = String(order.id); 
-            // Sanitize filename
             const safeName = order.customer_name.replace(/[^a-z0-9\u0600-\u06FF]/gi, '_');
             link.download = `invoice_${safeName}_${safeId.slice(0,8)}.png`;
             link.href = dataUrl;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
         } catch (error) {
             console.error("Invoice generation failed", error);
             alert('حدث خطأ أثناء إنشاء الوصل.');
@@ -228,13 +206,21 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
     }, 100);
   };
 
+  const handleSafeDelete = (e: React.MouseEvent, orderId: string) => {
+      e.stopPropagation();
+      e.preventDefault();
+      // Use standard confirm, ensure bubbling is stopped
+      if (window.confirm('هل أنت متأكد تماماً من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.')) {
+          onDelete(orderId);
+      }
+      setActiveActionId(null);
+  };
+
   return (
     <div className="space-y-6 relative">
       
       {/* --- Controls Header --- */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100">
-          
-          {/* Search */}
           <div className="relative w-full md:w-96">
             <Search className="absolute right-4 top-3.5 text-slate-400" size={20} />
             <input 
@@ -247,18 +233,14 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
-            
-            {/* Export Excel Button (Added) */}
             <button
                 onClick={handleExportExcel}
                 className="flex items-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl font-bold hover:bg-emerald-100 transition-colors flex-shrink-0"
-                title="تصدير إلى Excel"
             >
                 <FileSpreadsheet size={20} />
                 <span className="hidden md:inline">تصدير Excel</span>
             </button>
 
-            {/* Filter Tabs (Desktop) */}
             <div className="hidden md:flex items-center gap-1 bg-gray-50 p-1.5 rounded-2xl">
                 <button 
                     onClick={() => setFilterStatus('all')}
@@ -277,7 +259,6 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                 ))}
             </div>
             
-             {/* Filter Dropdown (Mobile) */}
             <div className="md:hidden flex-1 relative min-w-[140px]">
                 <select 
                     value={filterStatus}
@@ -306,7 +287,6 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
             <Search size={48} className="text-gray-300" />
           </div>
           <h3 className="text-xl font-bold text-slate-800">لا توجد نتائج</h3>
-          <p className="text-slate-500 mt-2 max-w-xs mx-auto">حاول تغيير مصطلحات البحث أو الفلتر.</p>
         </div>
       ) : (
         <>
@@ -320,13 +300,13 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                     <th className="py-5 px-6 font-bold text-slate-500 text-xs uppercase tracking-wider">المنتج</th>
                     <th className="py-5 px-6 font-bold text-slate-500 text-xs uppercase tracking-wider">المبلغ</th>
                     <th className="py-5 px-6 font-bold text-slate-500 text-xs uppercase tracking-wider">الحالة</th>
+                    <th className="py-5 px-6 font-bold text-slate-500 text-xs uppercase tracking-wider">الواصل</th>
                     <th className="py-5 px-6 font-bold text-slate-500 text-xs uppercase tracking-wider">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                     {filteredOrders.map((order, idx) => {
                     const status = statusConfig[order.status] || statusConfig.new;
-                    const StatusIcon = status.icon;
                     return (
                         <motion.tr 
                         initial={{ opacity: 0, y: 10 }}
@@ -350,18 +330,40 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                             <span className="text-sm font-medium text-slate-600">{order.product}</span>
                         </td>
                         <td className="py-4 px-6">
-                            <span className="font-mono font-bold text-slate-800 dir-ltr">
-                            {(order.price).toLocaleString()}
-                            </span>
+                            <span className="font-mono font-bold text-slate-800 dir-ltr">{(order.price).toLocaleString()}</span>
                         </td>
                         <td className="py-4 px-6">
-                            <StatusSelector 
-                                currentStatus={order.status} 
-                                onSelect={(s) => onStatusChange(order.id, s)} 
-                            />
+                            <StatusSelector currentStatus={order.status} onSelect={(s) => onStatusChange(order.id, s)} />
+                        </td>
+                         <td className="py-4 px-6">
+                            {order.status === 'delivered' && onToggleCollected ? (
+                                <button 
+                                    onClick={() => onToggleCollected(order.id, !!order.is_collected)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border",
+                                        order.is_collected 
+                                            ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20" 
+                                            : "bg-white text-slate-400 border-slate-200 border-dashed hover:border-slate-300 hover:text-slate-600"
+                                    )}
+                                >
+                                    <Banknote size={14} />
+                                    {order.is_collected ? 'تم الاستلام' : 'معلق'}
+                                </button>
+                            ) : (
+                                <span className="text-slate-300 text-xs font-bold">-</span>
+                            )}
                         </td>
                         <td className="py-4 px-6">
                              <div className="flex items-center gap-1">
+                                {onEdit && (
+                                    <button 
+                                        onClick={() => onEdit(order)}
+                                        className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                        title="تعديل الطلب"
+                                    >
+                                        <PenLine size={16} />
+                                    </button>
+                                )}
                                 <button 
                                     onClick={(e) => handleDownloadInvoice(order, e)}
                                     className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
@@ -372,14 +374,12 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                 <button 
                                     onClick={() => handleBlockCustomer(order)}
                                     className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                    title="حظر الزبون (القائمة السوداء)"
+                                    title="حظر الزبون"
                                 >
                                     <ShieldBan size={16} />
                                 </button>
                                 <button 
-                                    onClick={() => {
-                                        if(window.confirm('هل أنت متأكد من حذف هذا الطلب؟')) onDelete(order.id);
-                                    }}
+                                    onClick={(e) => handleSafeDelete(e, order.id)}
                                     className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                                     title="حذف الطلب"
                                 >
@@ -398,14 +398,20 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
             <div className="md:hidden space-y-3 pb-24">
                 {filteredOrders.map((order, idx) => {
                     const status = statusConfig[order.status] || statusConfig.new;
+                    const isMenuOpen = activeActionId === order.id;
+
                     return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                         key={order.id}
-                        className="bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 flex flex-col gap-4 relative overflow-hidden"
-                        onClick={() => setActiveActionId(null)} // Close menu on card click
+                        // Dynamic Z-Index to ensure dropdown overlaps next card properly
+                        className={cn(
+                            "bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 flex flex-col gap-4 relative",
+                            isMenuOpen ? "z-20" : "z-0"
+                        )}
+                        onClick={() => setActiveActionId(null)}
                     >
                         {/* Header: ID and Menu */}
                         <div className="flex justify-between items-center border-b border-gray-50 pb-3">
@@ -415,13 +421,23 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                             </div>
                             
                             <div className="flex items-center gap-2 relative">
-                                {/* VISIBLE DOWNLOAD BUTTON */}
+                                {/* EDIT BUTTON (Visible now) */}
+                                {onEdit && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onEdit(order); }}
+                                        className="p-2 text-blue-500 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors active:scale-95"
+                                        title="تعديل"
+                                    >
+                                        <PenLine size={16} />
+                                    </button>
+                                )}
+                                
                                 <button 
                                     onClick={(e) => handleDownloadInvoice(order, e)}
                                     className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full transition-colors active:scale-95"
-                                    title="تنزيل صورة الوصل"
+                                    title="تنزيل"
                                 >
-                                    <Download size={18} />
+                                    <Download size={16} />
                                 </button>
 
                                 <div className="relative">
@@ -433,20 +449,14 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                     </button>
                                     
                                     <AnimatePresence>
-                                        {activeActionId === order.id && (
+                                        {isMenuOpen && (
                                             <motion.div 
                                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9 }}
-                                                className="absolute left-0 top-8 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 p-1"
+                                                className="absolute left-0 top-8 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-1"
+                                                onClick={(e) => e.stopPropagation()}
                                             >
-                                                <button 
-                                                    onClick={(e) => handleDownloadInvoice(order, e)}
-                                                    className="w-full text-right px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
-                                                >
-                                                    <Download size={14} />
-                                                    تنزيل صورة الوصل
-                                                </button>
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -459,10 +469,7 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                                     حظر الزبون
                                                 </button>
                                                 <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if(window.confirm('حذف الطلب؟')) onDelete(order.id);
-                                                    }}
+                                                    onClick={(e) => handleSafeDelete(e, order.id)}
                                                     className="w-full text-right px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-2"
                                                 >
                                                     <Trash2 size={14} />
@@ -503,12 +510,23 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                     <Package size={14} className="text-slate-400" />
                                     {order.product}
                                 </div>
-                                <span className={cn("text-xs font-bold", status.color)}>
-                                    {status.label}
-                                </span>
+                                
+                                {order.status === 'delivered' && onToggleCollected && (
+                                    <button 
+                                        onClick={() => onToggleCollected(order.id, !!order.is_collected)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border",
+                                            order.is_collected 
+                                                ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20" 
+                                                : "bg-white text-slate-400 border-slate-200 border-dashed hover:border-slate-300 hover:text-slate-600"
+                                        )}
+                                    >
+                                        <Banknote size={14} />
+                                        {order.is_collected ? 'تم الاستلام' : 'معلق'}
+                                    </button>
+                                )}
                              </div>
                              
-                             {/* New Status Selector for Mobile */}
                              <StatusSelector 
                                 currentStatus={order.status} 
                                 onSelect={(s) => onStatusChange(order.id, s)} 
@@ -539,7 +557,6 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                 </div>
                 <div className="text-left">
                     <h2 className="text-2xl font-black text-slate-800">فاتورة طلب</h2>
-                    {/* SAFELY HANDLE ID SLICING HERE */}
                     <p className="text-sm font-medium text-slate-500 mt-1 dir-ltr">#{String(invoiceOrder.id).slice(0,8)}</p>
                     <p className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString('ar-IQ')}</p>
                 </div>

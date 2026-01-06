@@ -180,9 +180,9 @@ export default function App() {
       const delivered = orders.filter(o => o.status === 'delivered');
       
       // 1. Cash in Hand (Received from Courier): 
-      // This is the net amount the store owner gets. 
-      // Formula: (Price + Delivery - Discount) - Delivery Cost = Price - Discount
-      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+      // User Request: Deduct delivery_cost from the received amount.
+      // Formula: (Price - Discount) - Delivery Cost
+      const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - o.delivery_cost - (o.discount||0)), 0);
       
       // 2. Pending (With Driver): 
       // This is the total cash the driver is holding from the customer.
@@ -193,9 +193,9 @@ export default function App() {
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
       // 4. Net Profit Logic
-      // Revenue (from collected orders only) = Price - Discount
+      // Revenue (from collected orders only) = Price - Delivery - Discount
       const collectedOrders = delivered.filter(o => o.is_collected);
-      const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
+      const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - o.delivery_cost - (o.discount||0)), 0);
       const costOfGoodsSold = collectedOrders.reduce((sum, o) => sum + (o.cost_price || 0), 0);
       
       // Net = (Revenue - COGS) - Global Expenses

@@ -326,50 +326,78 @@ export default function App() {
         )}
 
         {activeTab === 'settings' && (
-            <div className="space-y-6">
-                {/* Settings Tab Switcher - Responsive & Scrollable */}
-                <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide px-4 -mx-4 md:mx-0 md:px-0">
+            <div className="space-y-6 max-w-2xl mx-auto">
+                {/* Settings Tab Switcher - Vertical Stack */}
+                <div className="flex flex-col gap-3">
                     <button 
                         onClick={() => setSettingsTab('delivery')}
                         className={clsx(
-                            "whitespace-nowrap flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                            settingsTab === 'delivery' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 hover:text-slate-900 border border-gray-100"
+                            "w-full p-4 rounded-2xl text-sm font-bold transition-all flex items-center gap-4 border text-right group",
+                            settingsTab === 'delivery' 
+                                ? "bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10 scale-[1.01]" 
+                                : "bg-white text-slate-500 hover:text-slate-800 border-gray-100 hover:border-gray-200 hover:bg-gray-50"
                         )}
                     >
-                        <MapPin size={16} />
-                        أسعار التوصيل
+                        <div className={clsx("p-3 rounded-xl transition-colors shrink-0", settingsTab === 'delivery' ? "bg-white/10" : "bg-gray-100 text-slate-400 group-hover:bg-white group-hover:text-emerald-500")}>
+                            <MapPin size={22} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-base font-black">أسعار التوصيل</p>
+                            <p className={clsx("text-xs font-medium mt-0.5 opacity-80", settingsTab === 'delivery' ? "text-slate-300" : "text-slate-400")}>تحديد تكلفة التوصيل للمحافظات</p>
+                        </div>
+                        {settingsTab === 'delivery' && <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>}
                     </button>
+
                     <button 
                          onClick={() => setSettingsTab('campaigns')}
                          className={clsx(
-                            "whitespace-nowrap flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                            settingsTab === 'campaigns' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 hover:text-slate-900 border border-gray-100"
+                            "w-full p-4 rounded-2xl text-sm font-bold transition-all flex items-center gap-4 border text-right group",
+                            settingsTab === 'campaigns' 
+                                ? "bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10 scale-[1.01]" 
+                                : "bg-white text-slate-500 hover:text-slate-800 border-gray-100 hover:border-gray-200 hover:bg-gray-50"
                         )}
                     >
-                        <Megaphone size={16} />
-                        إدارة الحملات
+                        <div className={clsx("p-3 rounded-xl transition-colors shrink-0", settingsTab === 'campaigns' ? "bg-white/10" : "bg-gray-100 text-slate-400 group-hover:bg-white group-hover:text-blue-500")}>
+                            <Megaphone size={22} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-base font-black">إدارة الحملات</p>
+                            <p className={clsx("text-xs font-medium mt-0.5 opacity-80", settingsTab === 'campaigns' ? "text-slate-300" : "text-slate-400")}>تحليل أداء الإعلانات والمصادر</p>
+                        </div>
+                        {settingsTab === 'campaigns' && <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>}
                     </button>
+
                     <button 
                          onClick={() => setSettingsTab('blacklist')}
                          className={clsx(
-                            "whitespace-nowrap flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                            settingsTab === 'blacklist' ? "bg-red-500 text-white shadow-md shadow-red-500/20" : "bg-white text-slate-500 hover:text-red-500 border border-gray-100"
+                            "w-full p-4 rounded-2xl text-sm font-bold transition-all flex items-center gap-4 border text-right group",
+                            settingsTab === 'blacklist' 
+                                ? "bg-red-500 text-white border-red-500 shadow-xl shadow-red-500/20 scale-[1.01]" 
+                                : "bg-white text-slate-500 hover:text-red-500 border-gray-100 hover:border-red-100 hover:bg-red-50"
                         )}
                     >
-                        <ShieldBan size={16} />
-                        القائمة السوداء
+                        <div className={clsx("p-3 rounded-xl transition-colors shrink-0", settingsTab === 'blacklist' ? "bg-white/10" : "bg-gray-100 text-slate-400 group-hover:bg-white group-hover:text-red-500")}>
+                            <ShieldBan size={22} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-base font-black">القائمة السوداء</p>
+                            <p className={clsx("text-xs font-medium mt-0.5 opacity-80", settingsTab === 'blacklist' ? "text-white" : "text-slate-400")}>حظر الأرقام غير المرغوب بها</p>
+                        </div>
+                        {settingsTab === 'blacklist' && <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></div>}
                     </button>
                 </div>
 
-                {settingsTab === 'delivery' && <DeliveryRatesSettings userId={session.user.id} />}
-                {settingsTab === 'campaigns' && <CampaignManager userId={session.user.id} />}
-                {settingsTab === 'blacklist' && <BlacklistManager userId={session.user.id} />}
+                <div className="pt-2">
+                    {settingsTab === 'delivery' && <DeliveryRatesSettings userId={session.user.id} />}
+                    {settingsTab === 'campaigns' && <CampaignManager userId={session.user.id} />}
+                    {settingsTab === 'blacklist' && <BlacklistManager userId={session.user.id} />}
+                </div>
             </div>
         )}
 
-        {/* Global Floating Action Button for Desktop */}
-        <div className="hidden md:block fixed bottom-8 left-8 z-50">
-           <button 
+        {/* Global Floating Action Buttons for Desktop */}
+        <div className="hidden md:flex fixed bottom-8 left-8 z-50 items-center gap-4">
+             <button 
                 onClick={() => setIsOrderModalOpen(true)}
                 className="group flex items-center gap-2 px-6 py-4 bg-slate-900 text-white rounded-2xl shadow-2xl hover:bg-slate-800 transition-all active:scale-95"
             >
@@ -380,7 +408,9 @@ export default function App() {
 
         <AddOrderModal 
             isOpen={isOrderModalOpen} 
-            onClose={() => setIsOrderModalOpen(false)} 
+            onClose={() => {
+                setIsOrderModalOpen(false);
+            }} 
             onSuccess={fetchData}
             onOpenSettings={() => {
                 setActiveTab('settings');

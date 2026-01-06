@@ -13,7 +13,9 @@ import {
   Briefcase,
   Loader2,
   Save,
-  X
+  X,
+  Trash2,
+  PenLine
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Supplier, SupplierLedgerEntry } from './types';
@@ -34,6 +36,8 @@ interface SuppliersManagerProps {
 export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: SuppliersManagerProps) => {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+  const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
+  
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<'PURCHASE' | 'PAYMENT'>('PURCHASE');
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,21 +58,62 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
     s.phone.includes(searchTerm)
   );
 
+  // --- Actions ---
+  const handleDeleteSupplier = async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!window.confirm('هل أنت متأكد من حذف هذا المورد؟ سيتم حذف جميع السجلات المالية المرتبطة به ولا يمكن التراجع.')) return;
+
+      try {
+          // Delete related ledger entries first (safety, though cascade might handle it)
+          await supabase!.from('supplier_ledger').delete().eq('supplier_id', id);
+          
+          // Delete supplier
+          const { error } = await supabase!.from('suppliers').delete().eq('id', id);
+          if(error) throw error;
+          
+          onUpdate();
+      } catch(err) {
+          console.error(err);
+          alert('حدث خطأ أثناء الحذف');
+      }
+  };
+
+  const handleEditSupplier = (supplier: Supplier, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSupplierToEdit(supplier);
+      setIsAddSupplierOpen(true);
+  };
+
+  const handleCloseModal = () => {
+      setIsAddSupplierOpen(false);
+      setSupplierToEdit(null);
+  };
+
   // --- Sub-Components ---
 
   const AddSupplierModal = () => {
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
+    const [name, setName] = useState(supplierToEdit?.name || '');
+    const [phone, setPhone] = useState(supplierToEdit?.phone || '');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
       try {
-        const { error } = await supabase!.from('suppliers').insert([{ user_id: userId, name, phone }]);
-        if (error) throw error;
+        if (supplierToEdit) {
+            // Update
+            const { error } = await supabase!
+                .from('suppliers')
+                .update({ name, phone })
+                .eq('id', supplierToEdit.id);
+            if (error) throw error;
+        } else {
+            // Insert
+            const { error } = await supabase!.from('suppliers').insert([{ user_id: userId, name, phone }]);
+            if (error) throw error;
+        }
         onUpdate();
-        setIsAddSupplierOpen(false);
+        handleCloseModal();
       } catch (err) {
         console.error(err);
         alert('حدث خطأ');
@@ -80,13 +125,13 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
          <motion.div initial={{scale: 0.9, opacity: 0}} animate={{scale: 1, opacity: 1}} className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-xl font-bold mb-4">إضافة مورد جديد</h3>
+            <h3 className="text-xl font-bold mb-4">{supplierToEdit ? 'تعديل بيانات المورد' : 'إضافة مورد جديد'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                <input placeholder="اسم المورد / المكتب" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:ring-2 focus:ring-indigo-500 font-bold" required />
                <input placeholder="رقم الهاتف" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:ring-2 focus:ring-indigo-500 font-bold dir-ltr text-right" required />
                <div className="flex gap-3 mt-6">
-                  <button type="button" onClick={() => setIsAddSupplierOpen(false)} className="flex-1 py-3 text-slate-500 font-bold">إلغاء</button>
-                  <button type="submit" disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">{loading ? 'جاري...' : 'حفظ'}</button>
+                  <button type="button" onClick={handleCloseModal} className="flex-1 py-3 text-slate-500 font-bold">إلغاء</button>
+                  <button type="submit" disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">{loading ? 'جاري...' : (supplierToEdit ? 'تحديث' : 'حفظ')}</button>
                </div>
             </form>
          </motion.div>
@@ -277,7 +322,7 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
              </div>
           </div>
           <button 
-            onClick={() => setIsAddSupplierOpen(true)}
+            onClick={() => { setSupplierToEdit(null); setIsAddSupplierOpen(true); }}
             className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95"
           >
             <Plus size={20} />
@@ -305,9 +350,9 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
                     key={supplier.id}
                     layoutId={supplier.id}
                     onClick={() => setSelectedSupplier(supplier)}
-                    className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+                    className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-visible"
                 >
-                    <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex justify-between items-start mb-4 relative z-0">
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-slate-400 font-bold text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                                 {supplier.name[0]}
@@ -317,9 +362,27 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
                                 <p className="text-xs text-slate-400 font-medium dir-ltr">{supplier.phone}</p>
                             </div>
                         </div>
+                        
+                        {/* Edit/Delete Buttons */}
+                        <div className="flex gap-1">
+                             <button 
+                                onClick={(e) => handleEditSupplier(supplier, e)}
+                                className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors z-20"
+                                title="تعديل"
+                             >
+                                 <PenLine size={16} />
+                             </button>
+                             <button 
+                                onClick={(e) => handleDeleteSupplier(supplier.id, e)}
+                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors z-20"
+                                title="حذف"
+                             >
+                                 <Trash2 size={16} />
+                             </button>
+                        </div>
                     </div>
                     
-                    <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center relative z-10">
+                    <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center relative z-0">
                         <span className="text-xs font-bold text-slate-500">الرصيد الحالي</span>
                         {balance === 0 ? (
                             <span className="text-emerald-600 font-black text-sm bg-emerald-100 px-2 py-1 rounded-lg">خالص</span>
@@ -328,8 +391,8 @@ export const SuppliersManager = ({ userId, suppliers, ledger, onUpdate }: Suppli
                         )}
                     </div>
 
-                    {/* Hover Effect */}
-                    <div className="absolute inset-0 border-2 border-indigo-500 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                    {/* Hover Effect Border */}
+                    <div className="absolute inset-0 border-2 border-indigo-500 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"></div>
                 </motion.div>
              );
           })}

@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Save, Tag, DollarSign, FileText } from 'lucide-react';
+import { X, Loader2, Save, Tag, DollarSign, FileText, PenLine } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import { Expense } from './types';
 
 interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   userId?: string;
+  expenseToEdit?: Expense | null;
 }
 
-export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId }: ExpenseModalProps) => {
+export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId, expenseToEdit }: ExpenseModalProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -18,6 +20,20 @@ export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId }: ExpenseModa
     category: 'نثريات',
     notes: ''
   });
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isOpen && expenseToEdit) {
+        setFormData({
+            title: expenseToEdit.title,
+            amount: expenseToEdit.amount.toString(),
+            category: expenseToEdit.category,
+            notes: '' // Assuming notes aren't in the simplified Expense type yet, or just reset
+        });
+    } else if (isOpen && !expenseToEdit) {
+        setFormData({ title: '', amount: '', category: 'نثريات', notes: '' });
+    }
+  }, [isOpen, expenseToEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,24 +44,36 @@ export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId }: ExpenseModa
       const amountNum = parseFloat(formData.amount.replace(/,/g, ''));
       if (isNaN(amountNum)) throw new Error("المبلغ غير صحيح");
 
-      const newExpense = {
+      const expensePayload = {
         user_id: userId,
         title: formData.title,
         amount: amountNum,
         category: formData.category,
-        created_at: new Date().toISOString()
+        // created_at is handled by DB for new, or kept for edit
       };
 
-      const { error } = await supabase!.from('expenses').insert([newExpense]);
-      if (error) throw error;
+      if (expenseToEdit) {
+          // Update
+          const { error } = await supabase!
+            .from('expenses')
+            .update(expensePayload)
+            .eq('id', expenseToEdit.id);
+          if (error) throw error;
+      } else {
+          // Insert
+          const { error } = await supabase!
+            .from('expenses')
+            .insert([{ ...expensePayload, created_at: new Date().toISOString() }]);
+          if (error) throw error;
+      }
 
       onSuccess();
       onClose();
       setFormData({ title: '', amount: '', category: 'نثريات', notes: '' });
       
     } catch (error) {
-      console.error('Error adding expense:', error);
-      alert('حدث خطأ أثناء إضافة المصروف.');
+      console.error('Error saving expense:', error);
+      alert('حدث خطأ أثناء حفظ المصروف.');
     } finally {
       setLoading(false);
     }
@@ -73,8 +101,12 @@ export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId }: ExpenseModa
         >
             <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
-                    <h3 className="text-xl font-black text-slate-800">صرف جديد</h3>
-                    <p className="text-xs text-slate-400 font-bold mt-1">تسجيل مصروفات المتجر</p>
+                    <h3 className="text-xl font-black text-slate-800">
+                        {expenseToEdit ? 'تعديل مصروف' : 'صرف جديد'}
+                    </h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1">
+                        {expenseToEdit ? 'تحديث بيانات المصروف' : 'تسجيل مصروفات المتجر'}
+                    </p>
                 </div>
                 <button 
                     onClick={onClose}
@@ -136,8 +168,8 @@ export const ExpenseModal = ({ isOpen, onClose, onSuccess, userId }: ExpenseModa
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-red-500/30 hover:shadow-red-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
-                    {loading ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} />}
-                    تسجيل المصروف
+                    {loading ? <Loader2 size={24} className="animate-spin" /> : (expenseToEdit ? <PenLine size={24} /> : <Save size={24} />)}
+                    {expenseToEdit ? 'تحديث المصروف' : 'تسجيل المصروف'}
                 </button>
             </div>
         </motion.div>

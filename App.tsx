@@ -421,7 +421,7 @@ export default function App() {
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <p className="font-bold text-slate-800 dir-ltr">-{expense.amount.toLocaleString()}</p>
-                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1">
                                             <button 
                                                 onClick={() => handleEditExpense(expense)}
                                                 className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

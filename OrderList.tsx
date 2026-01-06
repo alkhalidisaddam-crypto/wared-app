@@ -39,14 +39,51 @@ interface OrderListProps {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  new: { label: 'جديد', color: 'bg-blue-50 text-blue-700 border-blue-100', icon: Package },
-  processing: { label: 'قيد التجهيز', color: 'bg-yellow-50 text-yellow-700 border-yellow-100', icon: Clock },
-  out_for_delivery: { label: 'جاري التوصيل', color: 'bg-purple-50 text-purple-700 border-purple-100', icon: Truck },
-  delivered: { label: 'تم التوصيل', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 },
-  returned: { label: 'راجع', color: 'bg-red-50 text-red-700 border-red-100', icon: XCircle },
+  new: { label: 'جديد', color: 'bg-blue-50 text-blue-600 border-blue-100', icon: Package },
+  processing: { label: 'قيد التجهيز', color: 'bg-yellow-50 text-yellow-600 border-yellow-100', icon: Clock },
+  out_for_delivery: { label: 'جاري التوصيل', color: 'bg-purple-50 text-purple-600 border-purple-100', icon: Truck },
+  delivered: { label: 'تم التوصيل', color: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle2 },
+  returned: { label: 'راجع', color: 'bg-red-50 text-red-600 border-red-100', icon: XCircle },
 };
 
 const ORDER_STATUSES: OrderStatus[] = ['new', 'processing', 'out_for_delivery', 'delivered', 'returned'];
+
+// --- Helper Component: Status Selector Strip ---
+const StatusSelector = ({ currentStatus, onSelect, className }: { currentStatus: OrderStatus, onSelect: (s: OrderStatus) => void, className?: string }) => {
+    return (
+        <div className={cn("flex items-center gap-1 bg-gray-100/50 p-1.5 rounded-xl border border-gray-200 w-fit", className)}>
+            {ORDER_STATUSES.map((statusKey) => {
+                const config = statusConfig[statusKey];
+                const isActive = currentStatus === statusKey;
+                const Icon = config.icon;
+                
+                return (
+                    <button
+                        key={statusKey}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(statusKey);
+                        }}
+                        className={cn(
+                            "relative flex items-center justify-center p-2 rounded-lg transition-all duration-200 group",
+                            isActive 
+                                ? "bg-white shadow-sm ring-1 ring-black/5 scale-100 " + config.color 
+                                : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                        )}
+                        title={config.label}
+                    >
+                        <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                        
+                        {/* Status Label on Hover (Desktop) */}
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 hidden md:block">
+                            {config.label}
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
 
 export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -318,27 +355,10 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                             </span>
                         </td>
                         <td className="py-4 px-6">
-                             {/* Custom Select for Status */}
-                             <div className="relative group/status">
-                                <button className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all hover:brightness-95", status.color)}>
-                                    <StatusIcon size={12} />
-                                    {status.label}
-                                    <ChevronDown size={10} className="opacity-50" />
-                                </button>
-                                {/* Dropdown Menu */}
-                                <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 hidden group-hover/status:block">
-                                    {ORDER_STATUSES.map(s => (
-                                        <button 
-                                            key={s}
-                                            onClick={() => onStatusChange(order.id, s)}
-                                            className="w-full text-right px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-gray-50 hover:text-emerald-600 transition-colors flex items-center gap-2"
-                                        >
-                                            <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig[s].color.split(' ')[1].replace('text-', 'bg-'))}></div>
-                                            {statusConfig[s].label}
-                                        </button>
-                                    ))}
-                                </div>
-                             </div>
+                            <StatusSelector 
+                                currentStatus={order.status} 
+                                onSelect={(s) => onStatusChange(order.id, s)} 
+                            />
                         </td>
                         <td className="py-4 px-6">
                              <div className="flex items-center gap-1">
@@ -420,22 +440,6 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                                                 exit={{ opacity: 0, scale: 0.9 }}
                                                 className="absolute left-0 top-8 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 p-1"
                                             >
-                                                <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-gray-50">تغيير الحالة</div>
-                                                {ORDER_STATUSES.map(s => (
-                                                    <button 
-                                                        key={s}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onStatusChange(order.id, s);
-                                                            setActiveActionId(null);
-                                                        }}
-                                                        className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg flex items-center gap-2"
-                                                    >
-                                                        <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig[s].color.split(' ')[1].replace('text-', 'bg-'))}></div>
-                                                        {statusConfig[s].label}
-                                                    </button>
-                                                ))}
-                                                <div className="h-px bg-gray-50 my-1"></div>
                                                 <button 
                                                     onClick={(e) => handleDownloadInvoice(order, e)}
                                                     className="w-full text-right px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
@@ -493,14 +497,23 @@ export const OrderList = ({ orders, onStatusChange, onDelete, userId }: OrderLis
                         </div>
 
                         {/* Footer: Product & Status */}
-                        <div className="flex items-center justify-between pt-2">
-                             <div className="bg-gray-50 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-1.5 max-w-[150px] truncate">
-                                <Package size={14} className="text-slate-400" />
-                                {order.product}
+                        <div className="flex flex-col gap-3 pt-2">
+                             <div className="flex justify-between items-center">
+                                <div className="bg-gray-50 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-1.5 max-w-[150px] truncate">
+                                    <Package size={14} className="text-slate-400" />
+                                    {order.product}
+                                </div>
+                                <span className={cn("text-xs font-bold", status.color)}>
+                                    {status.label}
+                                </span>
                              </div>
-                             <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border", status.color)}>
-                                {status.label}
-                             </span>
+                             
+                             {/* New Status Selector for Mobile */}
+                             <StatusSelector 
+                                currentStatus={order.status} 
+                                onSelect={(s) => onStatusChange(order.id, s)} 
+                                className="w-full justify-between bg-gray-50/80 p-2"
+                             />
                         </div>
                     </motion.div>
                     )

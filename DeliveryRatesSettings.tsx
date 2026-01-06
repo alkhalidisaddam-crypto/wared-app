@@ -91,23 +91,23 @@ export const DeliveryRatesSettings = ({ userId }: DeliveryRatesSettingsProps) =>
     <div className="w-full max-w-3xl mx-auto pb-32 pt-2 px-2 md:px-4">
        
        {/* Sticky Header Actions */}
-       <div className="sticky top-0 z-20 bg-[#F3F4F6]/95 backdrop-blur-xl py-1 mb-2 -mx-2 px-2 md:mx-0 md:px-0 flex items-center justify-between gap-2 shadow-sm md:shadow-none border-b md:border-b-0 border-gray-200 md:bg-transparent transition-all">
-             <div className="flex-1 relative">
-                <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" size={10} />
+       <div className="sticky top-0 z-20 bg-[#F3F4F6]/95 backdrop-blur-xl py-3 mb-4 -mx-2 px-2 md:mx-0 md:px-0 flex items-center justify-between gap-4 shadow-sm md:shadow-none border-b md:border-b-0 border-gray-200 md:bg-transparent transition-all">
+             <div className="relative w-full md:w-80">
+                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                    placeholder="بحث..." 
                    value={searchTerm}
                    onChange={e => setSearchTerm(e.target.value)}
-                   className="w-full pr-6 pl-2 h-6 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 text-[10px] shadow-sm placeholder:text-slate-300"
+                   className="w-full pr-10 pl-4 h-11 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 text-sm shadow-sm placeholder:text-slate-300 transition-all"
                 />
              </div>
              
              <button 
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-slate-900 text-white px-2 h-6 rounded-md font-bold flex items-center gap-1 shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-70 text-[10px] whitespace-nowrap"
+                className="bg-slate-900 text-white px-5 h-11 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-70 text-sm whitespace-nowrap"
             >
-                {saving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />}
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
                 <span>حفظ التغييرات</span>
             </button>
        </div>

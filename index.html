@@ -75,6 +75,16 @@
   <body class="bg-[#F3F4F6] font-sans text-slate-800 antialiased selection:bg-emerald-100 selection:text-emerald-900 overflow-x-hidden">
     <div id="root"></div>
     <script>
+      // 1. Capture PWA install prompt event early to avoid missing it
+      window.deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent default browser install banner
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        window.deferredPrompt = e;
+      });
+
+      // 2. Register Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor, RefreshCw, ArrowRight } from 'lucide-react';
+import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor, RefreshCw, ArrowUp } from 'lucide-react';
 
 export const PWAInstallPrompt = () => {
   const [show, setShow] = useState(false);
@@ -67,6 +67,23 @@ export const PWAInstallPrompt = () => {
 
   return (
     <AnimatePresence>
+      
+      {/* --- Visual Arrow Pointer for Android/Manual Install --- */}
+      {showManual && !isIOS && (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: [0, -15, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="fixed top-2 left-4 z-[10000] flex flex-col items-center pointer-events-none"
+        >
+            <div className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-xl mb-1 border border-white/20 whitespace-nowrap">
+                اضغط هنا
+            </div>
+            <ArrowUp size={36} className="text-slate-900 drop-shadow-md" strokeWidth={3} />
+        </motion.div>
+      )}
+
       <div className="fixed inset-0 z-[9999] flex items-end justify-center pointer-events-none p-4 pb-6">
         <motion.div
            initial={{ y: "100%", opacity: 0 }}
@@ -125,14 +142,14 @@ export const PWAInstallPrompt = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-3 text-xs font-bold text-slate-600">
-                                     <p className="text-emerald-600 mb-2">التثبيت التلقائي غير مدعوم حالياً.</p>
+                                     <p className="text-emerald-600 mb-2">اتبع السهم الموجود في الأعلى:</p>
                                      <div className="flex items-center justify-between">
-                                        <span>1. اضغط على القائمة (الثلاث نقاط)</span>
+                                        <span>1. اضغط على الثلاث نقاط (القائمة)</span>
                                         <MoreVertical size={16} className="text-slate-500" />
                                     </div>
                                     <div className="h-px bg-gray-200"></div>
                                     <div className="flex items-center justify-between">
-                                        <span>2. اختر "تثبيت التطبيق"</span>
+                                        <span>2. اختر "إضافة إلى الشاشة الرئيسية"</span>
                                         <Smartphone size={16} className="text-slate-800" />
                                     </div>
                                 </div>

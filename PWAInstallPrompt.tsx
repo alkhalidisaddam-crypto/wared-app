@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor, RefreshCw } from 'lucide-react';
+import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor, RefreshCw, ArrowRight } from 'lucide-react';
 
 export const PWAInstallPrompt = () => {
   const [show, setShow] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  
+  // State to toggle manual instructions if native install fails
+  const [showManual, setShowManual] = useState(false);
 
   useEffect(() => {
     // 1. Check if already installed
@@ -18,7 +20,6 @@ export const PWAInstallPrompt = () => {
     // 2. Detect Platform
     const ua = window.navigator.userAgent.toLowerCase();
     setIsIOS(/iphone|ipad|ipod/.test(ua));
-    setIsMobile(/android|iphone|ipad|ipod/.test(ua));
 
     // 3. Event Listener for Native Prompt
     const handleBeforeInstallPrompt = (e: any) => {
@@ -35,10 +36,10 @@ export const PWAInstallPrompt = () => {
         setShow(true);
     }
 
-    // 5. Force show after delay even if event didn't fire (for manual instructions)
+    // 5. Force show after delay even if event didn't fire (so we can show the button that leads to instructions)
     const timer = setTimeout(() => {
         if (!checkStandalone) setShow(true);
-    }, 3000);
+    }, 2000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -48,6 +49,7 @@ export const PWAInstallPrompt = () => {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
+      // Native Install
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
@@ -55,11 +57,10 @@ export const PWAInstallPrompt = () => {
         (window as any).deferredPrompt = null;
         setShow(false);
       }
+    } else {
+        // Fallback: Show instructions
+        setShowManual(true);
     }
-  };
-  
-  const handleRefresh = () => {
-      window.location.reload();
   };
 
   if (isStandalone || !show) return null;
@@ -88,12 +89,13 @@ export const PWAInstallPrompt = () => {
                 <div className="flex-1">
                     <h3 className="font-black text-slate-800 text-lg">تثبيت التطبيق</h3>
                     <p className="text-sm text-slate-500 font-medium mt-1 leading-relaxed">
-                        قم بتثبيت "وارد" على جهازك للوصول السريع وأداء أفضل بدون انترنت.
+                        تثبيت "وارد" للوصول السريع بدون انترنت.
                     </p>
 
-                    {/* --- 1. Native Install Button (Android/Chrome) --- */}
-                    {deferredPrompt && (
-                        <button 
+                    {/* --- Unified Install Button --- */}
+                    {/* Always show this button first */}
+                    {!showManual && (
+                         <button 
                             onClick={handleInstallClick}
                             className="mt-4 w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
                         >
@@ -102,31 +104,30 @@ export const PWAInstallPrompt = () => {
                         </button>
                     )}
 
-                    {/* --- 2. iOS Instructions --- */}
-                    {!deferredPrompt && isIOS && (
-                        <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl text-xs font-bold text-slate-600 border border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <span>1. اضغط على زر المشاركة</span>
-                                <Share size={16} className="text-blue-500" />
-                            </div>
-                            <div className="h-px bg-gray-200"></div>
-                            <div className="flex items-center justify-between">
-                                <span>2. اختر "إضافة إلى الصفحة الرئيسية"</span>
-                                <PlusSquare size={16} className="text-slate-800" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- 3. Android/Desktop Manual Instructions (If Native Fails) --- */}
-                    {!deferredPrompt && !isIOS && (
-                        <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl text-xs font-bold text-slate-600 border border-gray-100">
-                            <p className="text-center text-slate-400 mb-2">
-                                إذا لم يظهر خيار التثبيت في القائمة، يرجى تحديث الصفحة.
-                            </p>
-                            {isMobile ? (
-                                <>
+                    {/* --- Manual Instructions (Revealed if native prompt fails) --- */}
+                    {showManual && (
+                        <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200"
+                        >
+                            {isIOS ? (
+                                <div className="space-y-3 text-xs font-bold text-slate-600">
                                     <div className="flex items-center justify-between">
-                                        <span>1. اضغط على خيارات المتصفح (⋮)</span>
+                                        <span>1. اضغط على مشاركة</span>
+                                        <Share size={16} className="text-blue-500" />
+                                    </div>
+                                    <div className="h-px bg-gray-200"></div>
+                                    <div className="flex items-center justify-between">
+                                        <span>2. اختر "إضافة للصفحة الرئيسية"</span>
+                                        <PlusSquare size={16} className="text-slate-800" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 text-xs font-bold text-slate-600">
+                                     <p className="text-emerald-600 mb-2">التثبيت التلقائي غير مدعوم حالياً.</p>
+                                     <div className="flex items-center justify-between">
+                                        <span>1. اضغط على القائمة (الثلاث نقاط)</span>
                                         <MoreVertical size={16} className="text-slate-500" />
                                     </div>
                                     <div className="h-px bg-gray-200"></div>
@@ -134,21 +135,16 @@ export const PWAInstallPrompt = () => {
                                         <span>2. اختر "تثبيت التطبيق"</span>
                                         <Smartphone size={16} className="text-slate-800" />
                                     </div>
-                                </>
-                            ) : (
-                                <div className="flex items-center justify-between">
-                                    <span>اضغط على أيقونة التثبيت في شريط العنوان</span>
-                                    <Monitor size={16} className="text-slate-800" />
                                 </div>
                             )}
-                             <button 
-                                onClick={handleRefresh}
-                                className="w-full mt-2 py-2 text-emerald-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-50 rounded-lg transition-colors"
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="w-full mt-3 py-2 text-slate-400 font-bold text-[10px] flex items-center justify-center gap-1 hover:text-emerald-600"
                             >
-                                <RefreshCw size={14} />
-                                تحديث الصفحة الآن
+                                <RefreshCw size={12} />
+                                حاول مرة أخرى (تحديث)
                             </button>
-                        </div>
+                        </motion.div>
                     )}
                 </div>
             </div>

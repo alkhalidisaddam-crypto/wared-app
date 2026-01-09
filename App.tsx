@@ -21,6 +21,8 @@ import { clsx } from 'clsx';
 // --- Simplified Setup Screen ---
 const SetupScreen = () => <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">System Setup Required</div>;
 
+const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png";
+
 export default function App() {
   if (!supabase) return <SetupScreen />; 
   const client = supabase as SupabaseClient;
@@ -227,8 +229,8 @@ export default function App() {
 
               <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 z-10 relative">
                   <div className="text-center mb-8">
-                      <div className="inline-block p-3 rounded-2xl bg-emerald-50 mb-4">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600"></div>
+                      <div className="inline-block p-1 rounded-2xl bg-emerald-50 mb-4">
+                          <img src={LOGO_URL} className="w-20 h-20 rounded-xl object-cover" alt="Logo" />
                       </div>
                       <h1 className="text-3xl font-black text-slate-800">وارد</h1>
                       <p className="text-slate-400 mt-2 font-medium">سجل دخولك للمتابعة</p>

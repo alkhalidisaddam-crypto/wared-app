@@ -1,11 +1,23 @@
-const CACHE_NAME = 'wared-dynamic-v1';
+const CACHE_NAME = 'wared-dynamic-v2';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/vite.svg'
+];
 
-// Install event
+// 1. Install Event: Pre-cache critical files immediately
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  self.skipWaiting(); // Force activation
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('SW: Pre-caching offline assets');
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
 });
 
-// Activate event
+// 2. Activate Event: Clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -18,38 +30,37 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  self.clients.claim(); // Take control of clients immediately
 });
 
-// Fetch event with Caching Strategy: Network First, then Cache
+// 3. Fetch Event: Stale-While-Revalidate Strategy
+// This ensures the user sees content quickly (from cache) but it updates in the background
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests
+  // Only handle GET requests
   if (event.request.method !== 'GET') return;
-
-  // Handle Supabase API requests separately if needed, 
-  // but for a simple "view last data offline" experience, Network First is good.
   
+  // Skip cross-origin requests (like Supabase) for aggressive caching, handle mostly local assets
+  const url = new URL(event.request.url);
+  if (url.origin !== location.origin) return;
+
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // If network fetch is successful, cache the response
-        // Check if we received a valid response
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
-          return networkResponse;
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Try to get from cache first
+      const cachedResponse = await cache.match(event.request);
+      
+      // Fetch from network to update cache (in background)
+      const networkFetch = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          cache.put(event.request, networkResponse.clone());
         }
-
-        // Clone response because it's a stream and can only be consumed once
-        const responseToCache = networkResponse.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      })
-      .catch(() => {
-        // If network fails (offline), try to return from cache
-        return caches.match(event.request);
-      })
+      }).catch(() => {
+        // Network failed
+        return null; 
+      });
+
+      // Return cached response if available, otherwise wait for network
+      return cachedResponse || networkFetch;
+    })
   );
 });

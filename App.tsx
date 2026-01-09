@@ -221,8 +221,11 @@ export default function App() {
 
   if (!session) {
       return (
-          <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] p-4">
-              <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100">
+          <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] p-4 relative">
+              {/* PWA Prompt on Login Screen */}
+              <PWAInstallPrompt />
+
+              <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 z-10 relative">
                   <div className="text-center mb-8">
                       <div className="inline-block p-3 rounded-2xl bg-emerald-50 mb-4">
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600"></div>

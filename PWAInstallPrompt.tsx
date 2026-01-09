@@ -1,66 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, MoreVertical, AlertTriangle } from 'lucide-react';
+import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor } from 'lucide-react';
 
 export const PWAInstallPrompt = () => {
   const [show, setShow] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [platform, setPlatform] = useState<'native' | 'ios' | 'android-manual' | 'other'>('other');
-  const [isSecure, setIsSecure] = useState(true);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // 0. Security Check (PWA requires HTTPS or localhost)
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isHttps = window.location.protocol === 'https:';
-    if (!isLocal && !isHttps) {
-        setIsSecure(false);
-    }
+    // 1. Check if already installed
+    const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    setIsStandalone(checkStandalone);
+    if (checkStandalone) return;
 
-    // 1. Check if already installed (Standalone mode)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (isStandalone) return;
+    // 2. Detect Platform
+    const ua = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(ua));
+    setIsMobile(/android|iphone|ipad|ipod/.test(ua));
 
-    // 2. Try to capture Native Install Event (Chrome/Android)
+    // 3. Event Listener for Native Prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setPlatform('native');
-      setShow(true);
+      setShow(true); // Auto-show if event fires
     };
-
-    // Check if event was already captured in global scope
-    if ((window as any).deferredPrompt) {
-        setDeferredPrompt((window as any).deferredPrompt);
-        setPlatform('native');
-        setShow(true);
-    }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 3. Platform Detection for Manual Instructions (Fallback)
-    // If native prompt doesn't fire within 2 seconds, we assume we need to show manual instructions
-    const timer = setTimeout(() => {
-        if (!deferredPrompt && !(window as any).deferredPrompt) {
-            const ua = window.navigator.userAgent.toLowerCase();
-            const isIOS = /iphone|ipad|ipod/.test(ua);
-            const isAndroid = /android/.test(ua);
+    // 4. Check if event was already captured globally (from index.html)
+    if ((window as any).deferredPrompt) {
+        setDeferredPrompt((window as any).deferredPrompt);
+        setShow(true);
+    }
 
-            if (isIOS) {
-                setPlatform('ios');
-                setShow(true);
-            } else if (isAndroid) {
-                setPlatform('android-manual');
-                setShow(true);
-            }
-            // We don't force show on desktop to avoid annoyance, unless needed
-        }
-    }, 2000);
+    // 5. Force show after delay even if event didn't fire (for manual instructions)
+    const timer = setTimeout(() => {
+        if (!checkStandalone) setShow(true);
+    }, 3000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       clearTimeout(timer);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -69,12 +53,17 @@ export const PWAInstallPrompt = () => {
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
         (window as any).deferredPrompt = null;
+        setShow(false);
       }
-      setShow(false);
+    } else {
+        // Fallback for when button is clicked but no native prompt available
+        // Usually means we are on a platform that doesn't support programmatic trigger (iOS)
+        // or the criteria aren't met yet.
+        // We do nothing here as the UI handles displaying instructions below.
     }
   };
 
-  if (!show) return null;
+  if (isStandalone || !show) return null;
 
   return (
     <AnimatePresence>
@@ -93,13 +82,6 @@ export const PWAInstallPrompt = () => {
                 <X size={20} />
             </button>
 
-            {!isSecure && (
-                <div className="mb-4 bg-amber-50 text-amber-700 p-3 rounded-xl text-xs font-bold flex items-center gap-2 border border-amber-100">
-                    <AlertTriangle size={16} />
-                    تحذير: التثبيت يتطلب اتصال آمن (HTTPS)
-                </div>
-            )}
-
             <div className="flex items-start gap-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0 shadow-sm border border-emerald-100">
                     <Download size={28} />
@@ -107,11 +89,11 @@ export const PWAInstallPrompt = () => {
                 <div className="flex-1">
                     <h3 className="font-black text-slate-800 text-lg">تثبيت التطبيق</h3>
                     <p className="text-sm text-slate-500 font-medium mt-1 leading-relaxed">
-                        قم بتثبيت "وارد" للوصول السريع وأداء أفضل.
+                        قم بتثبيت "وارد" على جهازك للوصول السريع وأداء أفضل بدون انترنت.
                     </p>
 
-                    {/* --- NATIVE INSTALL BUTTON --- */}
-                    {platform === 'native' && (
+                    {/* --- 1. Native Install Button (Android/Chrome) --- */}
+                    {deferredPrompt && (
                         <button 
                             onClick={handleInstallClick}
                             className="mt-4 w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
@@ -121,8 +103,8 @@ export const PWAInstallPrompt = () => {
                         </button>
                     )}
 
-                    {/* --- IOS MANUAL INSTRUCTIONS --- */}
-                    {platform === 'ios' && (
+                    {/* --- 2. iOS Instructions --- */}
+                    {!deferredPrompt && isIOS && (
                         <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl text-xs font-bold text-slate-600 border border-gray-100">
                             <div className="flex items-center justify-between">
                                 <span>1. اضغط على زر المشاركة</span>
@@ -136,18 +118,28 @@ export const PWAInstallPrompt = () => {
                         </div>
                     )}
 
-                    {/* --- ANDROID MANUAL INSTRUCTIONS (Fallback) --- */}
-                    {platform === 'android-manual' && (
+                    {/* --- 3. Android/Desktop Manual Instructions (If Native Fails) --- */}
+                    {!deferredPrompt && !isIOS && (
                         <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl text-xs font-bold text-slate-600 border border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <span>1. اضغط على القائمة (الثلاث نقاط)</span>
-                                <MoreVertical size={16} className="text-slate-500" />
-                            </div>
-                            <div className="h-px bg-gray-200"></div>
-                            <div className="flex items-center justify-between">
-                                <span>2. اختر "تثبيت التطبيق" أو "الإضافة للشاشة"</span>
-                                <Download size={16} className="text-slate-800" />
-                            </div>
+                            <p className="text-center text-slate-400 mb-2">التثبيت التلقائي غير متاح حالياً.</p>
+                            {isMobile ? (
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <span>1. اضغط على خيارات المتصفح (⋮)</span>
+                                        <MoreVertical size={16} className="text-slate-500" />
+                                    </div>
+                                    <div className="h-px bg-gray-200"></div>
+                                    <div className="flex items-center justify-between">
+                                        <span>2. اختر "تثبيت التطبيق"</span>
+                                        <Smartphone size={16} className="text-slate-800" />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-between">
+                                    <span>اضغط على أيقونة التثبيت في شريط العنوان</span>
+                                    <Monitor size={16} className="text-slate-800" />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

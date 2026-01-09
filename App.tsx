@@ -14,6 +14,7 @@ import { CampaignStats } from './CampaignStats';
 import { ProfitCalculator } from './ProfitCalculator';
 import { SuppliersManager } from './SuppliersManager';
 import { ProductAnalytics } from './ProductAnalytics';
+import { PWAInstallPrompt } from './PWAInstallPrompt'; // Import PWA Prompt
 import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan, PenLine, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -268,6 +269,9 @@ export default function App() {
       onLogout={handleLogout}
       userEmail={session.user.email}
     >
+        {/* PWA Install Prompt - Appears over content if applicable */}
+        <PWAInstallPrompt />
+
         {activeTab === 'home' && (
             <div className="space-y-8 pb-24">
                 <DashboardStats stats={stats} orders={orders} />

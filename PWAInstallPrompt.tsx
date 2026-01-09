@@ -12,25 +12,30 @@ export const PWAInstallPrompt = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     if (isStandalone) return;
 
-    // 2. Handle Android/Desktop (beforeinstallprompt event)
+    // 2. Check if we captured the event early (in index.html)
+    if ((window as any).deferredPrompt) {
+        setDeferredPrompt((window as any).deferredPrompt);
+        setShow(true);
+    }
+
+    // 3. Listen for the event (if it hasn't fired yet)
     const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault(); // Prevent default mini-infobar
+      e.preventDefault();
       setDeferredPrompt(e);
-      // Show custom prompt
       setShow(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 3. Handle iOS Detection
+    // 4. Handle iOS Detection
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     
-    // Only show on iOS if it's NOT standalone (checked above)
-    if (isIosDevice) {
+    // Only show on iOS if it's NOT standalone
+    if (isIosDevice && !isStandalone) {
         setIsIOS(true);
-        // Delay slightly so it doesn't pop up instantly on load
-        setTimeout(() => setShow(true), 3000);
+        // Delay slightly so user sees the page first
+        setTimeout(() => setShow(true), 2000);
     }
 
     return () => {
@@ -44,6 +49,7 @@ export const PWAInstallPrompt = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        (window as any).deferredPrompt = null; // Clear global
       }
       setShow(false);
     }
@@ -57,16 +63,18 @@ export const PWAInstallPrompt = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-end justify-center pointer-events-none p-4">
+      {/* High Z-Index to appear above Login Screen and Modals */}
+      <div className="fixed inset-0 z-[9999] flex items-end justify-center pointer-events-none p-4">
         <motion.div
            initial={{ y: "100%", opacity: 0 }}
            animate={{ y: 0, opacity: 1 }}
            exit={{ y: "100%", opacity: 0 }}
-           className="w-full max-w-md bg-white p-6 rounded-[2rem] shadow-2xl border border-emerald-100 pointer-events-auto relative"
+           transition={{ type: "spring", damping: 25, stiffness: 300 }}
+           className="w-full max-w-md bg-white p-6 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-emerald-100 pointer-events-auto relative"
         >
             <button 
                 onClick={handleDismiss} 
-                className="absolute top-4 right-4 text-slate-300 hover:text-slate-500 transition-colors"
+                className="absolute top-4 right-4 text-slate-300 hover:text-slate-500 transition-colors p-1"
             >
                 <X size={20} />
             </button>
@@ -99,8 +107,9 @@ export const PWAInstallPrompt = () => {
                     ) : (
                         <button 
                             onClick={handleInstallClick}
-                            className="mt-4 w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20 active:scale-95"
+                            className="mt-4 w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
                         >
+                            <Download size={18} />
                             تثبيت الآن
                         </button>
                     )}

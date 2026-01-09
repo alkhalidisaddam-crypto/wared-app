@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="apple-touch-icon" href="/vite.svg" />
     <!-- Added viewport-fit=cover for better display on iPhones with notch -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Wared | وارد</title>
@@ -75,21 +76,20 @@
   <body class="bg-[#F3F4F6] font-sans text-slate-800 antialiased selection:bg-emerald-100 selection:text-emerald-900 overflow-x-hidden">
     <div id="root"></div>
     <script>
-      // 1. Capture PWA install prompt event early to avoid missing it
+      // 1. Capture PWA install prompt event early
       window.deferredPrompt = null;
       window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent default browser install banner
         e.preventDefault();
-        // Stash the event so it can be triggered later
         window.deferredPrompt = e;
+        console.log("PWA: beforeinstallprompt fired");
       });
 
-      // 2. Register Service Worker
+      // 2. Register Service Worker with scope check
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => console.log('SW registered'))
-            .catch(err => console.log('SW registration failed', err));
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(registration => console.log('SW registered with scope:', registration.scope))
+            .catch(err => console.log('SW registration failed:', err));
         });
       }
     </script>

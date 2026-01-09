@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor } from 'lucide-react';
+import { Download, X, Share, PlusSquare, MoreVertical, Smartphone, Monitor, RefreshCw } from 'lucide-react';
 
 export const PWAInstallPrompt = () => {
   const [show, setShow] = useState(false);
@@ -29,7 +29,7 @@ export const PWAInstallPrompt = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 4. Check if event was already captured globally (from index.html)
+    // 4. Check if event was already captured globally
     if ((window as any).deferredPrompt) {
         setDeferredPrompt((window as any).deferredPrompt);
         setShow(true);
@@ -55,12 +55,11 @@ export const PWAInstallPrompt = () => {
         (window as any).deferredPrompt = null;
         setShow(false);
       }
-    } else {
-        // Fallback for when button is clicked but no native prompt available
-        // Usually means we are on a platform that doesn't support programmatic trigger (iOS)
-        // or the criteria aren't met yet.
-        // We do nothing here as the UI handles displaying instructions below.
     }
+  };
+  
+  const handleRefresh = () => {
+      window.location.reload();
   };
 
   if (isStandalone || !show) return null;
@@ -121,7 +120,9 @@ export const PWAInstallPrompt = () => {
                     {/* --- 3. Android/Desktop Manual Instructions (If Native Fails) --- */}
                     {!deferredPrompt && !isIOS && (
                         <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-xl text-xs font-bold text-slate-600 border border-gray-100">
-                            <p className="text-center text-slate-400 mb-2">التثبيت التلقائي غير متاح حالياً.</p>
+                            <p className="text-center text-slate-400 mb-2">
+                                إذا لم يظهر خيار التثبيت في القائمة، يرجى تحديث الصفحة.
+                            </p>
                             {isMobile ? (
                                 <>
                                     <div className="flex items-center justify-between">
@@ -140,6 +141,13 @@ export const PWAInstallPrompt = () => {
                                     <Monitor size={16} className="text-slate-800" />
                                 </div>
                             )}
+                             <button 
+                                onClick={handleRefresh}
+                                className="w-full mt-2 py-2 text-emerald-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-50 rounded-lg transition-colors"
+                            >
+                                <RefreshCw size={14} />
+                                تحديث الصفحة الآن
+                            </button>
                         </div>
                     )}
                 </div>

@@ -41,6 +41,8 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
     { id: 'more', label: 'المزيد', icon: Menu, desktopIcon: null, isMobileOnly: true, hidden: true },
   ];
 
+  const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png";
+
   return (
     <div className="flex min-h-screen bg-[#F3F4F6]">
       
@@ -53,9 +55,7 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
       >
         {/* Brand */}
         <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-gradient-to-br from-emerald-400 to-teal-600 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
-            <LayoutDashboard className="text-white w-6 h-6" />
-          </div>
+          <img src={LOGO_URL} className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" alt="Logo" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">وارد</h1>
             <p className="text-xs text-slate-400 font-medium">نظام إدارة الطلبات</p>
@@ -124,9 +124,7 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
         {/* Mobile Header (Top Bar) */}
         <div className="md:hidden flex justify-between items-center mb-6 pt-2">
             <div className="flex items-center gap-2">
-                <div className="bg-gradient-to-tr from-emerald-500 to-teal-600 p-2 rounded-xl">
-                    <LayoutDashboard size={20} className="text-white"/>
-                </div>
+                <img src={LOGO_URL} className="w-10 h-10 rounded-xl object-cover shadow-md" alt="Logo" />
                 <h1 className="text-xl font-black text-slate-800">وارد</h1>
             </div>
             <div className="flex gap-3">

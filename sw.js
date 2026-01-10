@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wared-dynamic-v2';
+const CACHE_NAME = 'wared-dynamic-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -33,15 +33,24 @@ self.addEventListener('activate', (event) => {
   self.clients.claim(); // Take control of clients immediately
 });
 
-// 3. Fetch Event: Stale-While-Revalidate Strategy
-// This ensures the user sees content quickly (from cache) but it updates in the background
+// 3. Fetch Event
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return;
-  
-  // Skip cross-origin requests (like Supabase) for aggressive caching, handle mostly local assets
   const url = new URL(event.request.url);
-  if (url.origin !== location.origin) return;
+
+  // A. Navigation Fallback (SPA Logic)
+  // If the user navigates to a page (e.g. opens the app), try network first, fall back to index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/index.html');
+      })
+    );
+    return;
+  }
+
+  // B. Asset Caching (Stale-While-Revalidate)
+  // Only handle GET requests and same-origin
+  if (event.request.method !== 'GET' || url.origin !== location.origin) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {

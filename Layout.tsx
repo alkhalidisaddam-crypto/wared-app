@@ -55,7 +55,8 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
       >
         {/* Brand */}
         <div className="flex items-center gap-3 mb-10 px-2">
-          <img src={LOGO_URL} className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" alt="Logo" />
+          {/* Removed background/borders from logo to support transparency */}
+          <img src={LOGO_URL} className="w-14 h-14 object-contain" alt="Logo" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">وارد</h1>
             <p className="text-xs text-slate-400 font-medium">نظام إدارة الطلبات</p>
@@ -124,7 +125,7 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
         {/* Mobile Header (Top Bar) */}
         <div className="md:hidden flex justify-between items-center mb-6 pt-2">
             <div className="flex items-center gap-2">
-                <img src={LOGO_URL} className="w-10 h-10 rounded-xl object-cover shadow-md" alt="Logo" />
+                <img src={LOGO_URL} className="w-10 h-10 object-contain" alt="Logo" />
                 <h1 className="text-xl font-black text-slate-800">وارد</h1>
             </div>
             <div className="flex gap-3">

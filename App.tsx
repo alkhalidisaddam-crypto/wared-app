@@ -229,8 +229,9 @@ export default function App() {
 
               <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 z-10 relative">
                   <div className="text-center mb-8">
-                      <div className="inline-block p-1 rounded-2xl bg-emerald-50 mb-4">
-                          <img src={LOGO_URL} className="w-20 h-20 rounded-xl object-cover" alt="Logo" />
+                      {/* Removed bg-emerald-50 to ensure transparency logic applies better, or keep it if logo is clean */}
+                      <div className="inline-block p-1 rounded-2xl mb-4">
+                          <img src={LOGO_URL} className="w-24 h-24 object-contain" alt="Logo" />
                       </div>
                       <h1 className="text-3xl font-black text-slate-800">وارد</h1>
                       <p className="text-slate-400 mt-2 font-medium">سجل دخولك للمتابعة</p>
@@ -318,7 +319,7 @@ export default function App() {
                                         </div>
                                         <div>
                                             <h5 className="font-bold text-slate-700 text-sm">{expense.title}</h5>
-                                            <p className="text-[10px] text-slate-400">{new Date(expense.created_at).toLocaleDateString('ar-IQ')}</p>
+                                            <p className="text-xs text-slate-400">{new Date(expense.created_at).toLocaleDateString('ar-IQ')}</p>
                                         </div>
                                     </div>
                                     <span className="font-bold text-slate-800 dir-ltr text-sm">-{expense.amount.toLocaleString()}</span>

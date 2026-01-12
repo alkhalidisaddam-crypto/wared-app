@@ -15,7 +15,7 @@ import { ProfitCalculator } from './ProfitCalculator';
 import { SuppliersManager } from './SuppliersManager';
 import { ProductAnalytics } from './ProductAnalytics';
 import { PWAInstallPrompt } from './PWAInstallPrompt'; // Import PWA Prompt
-import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan, PenLine, Trash2 } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan, PenLine, Trash2, PlayCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // --- Simplified Setup Screen ---
@@ -263,6 +263,16 @@ export default function App() {
                   <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="w-full mt-6 text-sm font-bold text-slate-400 hover:text-emerald-600 transition-colors">
                       {authMode === 'login' ? 'ليس لديك حساب؟ أنشئ حساباً جديداً' : 'لديك حساب بالفعل؟ تسجيل الدخول'}
                   </button>
+
+                  <a 
+                    href="https://youtu.be/bcdGnX9t-V0"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full mt-4 py-3 bg-white border-2 border-red-50 text-slate-500 rounded-2xl font-bold hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all group"
+                  >
+                      <PlayCircle size={20} className="text-red-400 group-hover:text-red-500 transition-colors" />
+                      شاهد فيديو شرح النظام
+                  </a>
               </div>
           </div>
       );

@@ -124,7 +124,7 @@ export const AccessLock = ({ onUnlock }: AccessLockProps) => {
 
         <div className="mt-8 pt-6 border-t border-gray-50 text-center">
             <p className="text-xs text-slate-400 font-medium">
-                تواجه مشكلة في التفعيل؟ <a href="#" className="text-emerald-600 font-bold hover:underline">تواصل مع الدعم الفني</a>
+                تواجه مشكلة في التفعيل؟ <a href="https://wa.me/9647734382514" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold hover:underline">تواصل مع الدعم الفني</a>
             </p>
         </div>
       </motion.div>

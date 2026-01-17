@@ -14,7 +14,8 @@ import { CampaignStats } from './CampaignStats';
 import { ProfitCalculator } from './ProfitCalculator';
 import { SuppliersManager } from './SuppliersManager';
 import { ProductAnalytics } from './ProductAnalytics';
-import { PWAInstallPrompt } from './PWAInstallPrompt'; // Import PWA Prompt
+import { PWAInstallPrompt } from './PWAInstallPrompt'; 
+import { AccessLock } from './AccessLock'; // Import AccessLock
 import { Loader2, Plus, TrendingDown, DollarSign, MapPin, Megaphone, ShieldBan, PenLine, Trash2, PlayCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -26,6 +27,12 @@ const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-P
 export default function App() {
   if (!supabase) return <SetupScreen />; 
   const client = supabase as SupabaseClient;
+
+  // --- Lock Screen State ---
+  // Check localStorage immediately to decide initial state
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => {
+     return localStorage.getItem('wared_access_granted') === 'true';
+  });
 
   // --- State ---
   const [session, setSession] = useState<any>(null);
@@ -42,10 +49,10 @@ export default function App() {
   
   // UI State
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null); // State for editing orders
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null); // State for editing expenses
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   
   // Auth State
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
@@ -115,52 +122,43 @@ export default function App() {
   // Actions
   const handleUpdateStatus = async (id: string, newStatus: OrderStatus) => {
     try {
-        // Optimistic update
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-        
         const { error } = await client.from('orders').update({ status: newStatus }).eq('id', id);
         if (error) throw error;
     } catch (err) {
         console.error("Error updating status", err);
-        fetchData(); // Revert on error
+        fetchData();
     }
   };
 
   const handleToggleCollected = async (id: string, currentStatus: boolean) => {
     try {
-        // Optimistic update
         setOrders(prev => prev.map(o => o.id === id ? { ...o, is_collected: !currentStatus } : o));
-        
         const { error } = await client.from('orders').update({ is_collected: !currentStatus }).eq('id', id);
         if (error) throw error;
     } catch (err) {
         console.error("Error updating collection status", err);
-        fetchData(); // Revert
+        fetchData(); 
     }
   };
 
-  // --- EDIT ORDER FUNCTION ---
   const handleEditOrder = (order: Order) => {
       setOrderToEdit(order);
       setIsOrderModalOpen(true);
   };
 
-  // --- DELETE ORDER FUNCTION ---
   const handleDeleteOrder = async (id: string) => {
       try {
-          // Optimistic update
           setOrders(prev => prev.filter(o => o.id !== id));
-          
           const { error } = await client.from('orders').delete().eq('id', id);
           if (error) throw error;
       } catch (err) {
           console.error("Error deleting order", err);
           alert("فشل حذف الطلب، يرجى المحاولة مرة أخرى");
-          fetchData(); // Restore data
+          fetchData(); 
       }
   };
 
-  // --- EXPENSE FUNCTIONS ---
   const handleEditExpense = (expense: Expense) => {
       setExpenseToEdit(expense);
       setIsExpenseModalOpen(true);
@@ -178,58 +176,41 @@ export default function App() {
     }
   };
 
-  // Stats Calculation
   const stats = useMemo(() => {
       const delivered = orders.filter(o => o.status === 'delivered');
-      
-      // 1. Cash in Hand (Received from Courier): 
-      // Corrected Logic: Price is the Item Price (Net). 
-      // The driver keeps delivery_cost. The merchant receives Price - Discount.
       const cash = delivered.filter(o => o.is_collected).reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
-      
-      // 2. Pending (With Driver - Total Cash): 
-      // The driver collects (Price + Delivery - Discount) from customer.
       const pendingOrders = delivered.filter(o => !o.is_collected);
       const pending = pendingOrders.reduce((sum, o) => sum + (o.price + o.delivery_cost - (o.discount||0)), 0);
-      
-      // 2.1 Pending Net (What Merchant Expects):
-      // Merchant expects: Price - Discount (Driver keeps delivery).
       const pendingNet = pendingOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
-
-      // 3. Total Expenses (Global)
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-      // 4. Net Profit Logic
-      // Revenue is just the Price (because Delivery is pass-through to driver).
       const collectedOrders = delivered.filter(o => o.is_collected);
       const revenueFromCollected = collectedOrders.reduce((sum, o) => sum + (o.price - (o.discount||0)), 0);
       const costOfGoodsSold = collectedOrders.reduce((sum, o) => sum + (o.cost_price || 0), 0);
-      
-      // Net = Revenue - COGS - Expenses
       const net = revenueFromCollected - costOfGoodsSold - totalExpenses;
-      
-      // Calculate Total Supplier Debt
       const totalSupplierDebt = ledger.reduce((acc, curr) => {
          return curr.transaction_type === 'PURCHASE' ? acc + curr.amount : acc - curr.amount;
       }, 0);
-      
       return { cash, pending, pendingNet, net, totalExpenses, totalDebt: totalSupplierDebt };
   }, [orders, expenses, ledger]);
 
 
   // --- Render ---
 
+  // 1. Check Access Lock First
+  if (!isAppUnlocked) {
+     return <AccessLock onUnlock={() => setIsAppUnlocked(true)} />;
+  }
+
+  // 2. Normal App Flow
   if (loading && !session) return <div className="flex h-screen items-center justify-center bg-[#F3F4F6]"><Loader2 className="animate-spin text-emerald-600" size={32} /></div>;
 
   if (!session) {
       return (
           <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] p-4 relative">
-              {/* PWA Prompt on Login Screen */}
               <PWAInstallPrompt />
 
               <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 z-10 relative">
                   <div className="text-center mb-8">
-                      {/* Removed bg-emerald-50 to ensure transparency logic applies better, or keep it if logo is clean */}
                       <div className="inline-block p-1 rounded-2xl mb-4">
                           <img src={LOGO_URL} className="w-24 h-24 object-contain" alt="Logo" />
                       </div>
@@ -285,7 +266,6 @@ export default function App() {
       onLogout={handleLogout}
       userEmail={session.user.email}
     >
-        {/* PWA Install Prompt - Appears over content if applicable */}
         <PWAInstallPrompt />
 
         {activeTab === 'home' && (
@@ -294,7 +274,6 @@ export default function App() {
                 <ProductAnalytics orders={orders} />
                 <CampaignStats orders={orders} campaigns={campaigns} />
                 
-                {/* --- Recent Expenses on Home Tab --- */}
                 <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-6 border-b border-gray-50 pb-4">
                         <div className="flex items-center gap-3">

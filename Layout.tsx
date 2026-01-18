@@ -41,7 +41,7 @@ export const Layout = ({ children, activeTab, setActiveTab, onLogout, userEmail 
     { id: 'more', label: 'المزيد', icon: Menu, desktopIcon: null, isMobileOnly: true, hidden: true },
   ];
 
-  const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png";
+  const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Untitled-design.png";
 
   return (
     <div className="flex min-h-screen bg-[#F3F4F6]">

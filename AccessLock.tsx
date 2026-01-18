@@ -15,7 +15,7 @@ const VALID_CODES = [
   "WARED-VIP-5050"
 ];
 
-const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png";
+const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Untitled-design.png";
 
 interface AccessLockProps {
   onUnlock: () => void;

@@ -22,7 +22,7 @@ import { clsx } from 'clsx';
 // --- Simplified Setup Screen ---
 const SetupScreen = () => <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">System Setup Required</div>;
 
-const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png";
+const LOGO_URL = "http://ratibni.net/wp-content/uploads/2026/01/Untitled-design.png";
 
 export default function App() {
   if (!supabase) return <SetupScreen />; 
@@ -211,7 +211,7 @@ export default function App() {
 
               <div className="w-full max-w-sm bg-white p-10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 z-10 relative">
                   <div className="text-center mb-8">
-                      <div className="inline-block p-1 rounded-2xl mb-4">
+                      <div className="inline-block mb-4">
                           <img src={LOGO_URL} className="w-24 h-24 object-contain" alt="Logo" />
                       </div>
                       <h1 className="text-3xl font-black text-slate-800">وارد</h1>

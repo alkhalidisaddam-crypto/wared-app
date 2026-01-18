@@ -101,9 +101,9 @@ export const PWAInstallPrompt = () => {
 
             <div className="flex items-start gap-4">
                 <img 
-                    src="http://ratibni.net/wp-content/uploads/2026/01/Elegant-Circle-Photography-Logo.png" 
+                    src="http://ratibni.net/wp-content/uploads/2026/01/Untitled-design.png" 
                     alt="Wared Logo" 
-                    className="w-16 h-16 rounded-2xl shadow-sm border border-emerald-100 object-cover shrink-0" 
+                    className="w-16 h-16 object-contain shrink-0" 
                 />
                 <div className="flex-1">
                     <h3 className="font-black text-slate-800 text-lg">تثبيت التطبيق</h3>
